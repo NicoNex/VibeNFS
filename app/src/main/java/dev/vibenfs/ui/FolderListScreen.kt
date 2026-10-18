@@ -182,7 +182,8 @@ private fun MountedBody(volume: Volume, state: MountState.Mounted, onToggle: () 
         Spacer(Modifier.weight(1f))
         MountSwitch(volume, true, onToggle, onPrimary = true)
     }
-    Poster(volume.name, colors.primaryContainer, maxSize = 76)
+    // onPrimary on primary is the pair Material guarantees readable for any wallpaper palette.
+    Poster(volume.name, colors.onPrimary, maxSize = 76)
     val total = state.totalBytes
     val free = state.freeBytes
     if (total != null && free != null && total > 0) {
@@ -244,7 +245,7 @@ private fun ErrorBody(volume: Volume, state: MountState.Error, onMount: (Boolean
 private fun OffBody(volume: Volume, onToggle: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Poster(volume.name, MaterialTheme.colorScheme.outline, maxSize = 48)
+            Poster(volume.name, MaterialTheme.colorScheme.onSurfaceVariant, maxSize = 48)
             MonoLabel("${stringResource(R.string.state_off)} · ${volume.export} · ${volume.version.label()}")
         }
         MountSwitch(volume, false, onToggle, onPrimary = false)

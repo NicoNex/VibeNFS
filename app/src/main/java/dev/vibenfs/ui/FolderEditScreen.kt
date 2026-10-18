@@ -5,6 +5,7 @@ package dev.vibenfs.ui
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterExitState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -414,19 +415,21 @@ private fun SaveSplitButton(onSaveAndMount: () -> Unit, onSave: () -> Unit) {
                     shapes = SplitButtonDefaults.trailingButtonShapesFor(SplitButtonDefaults.MediumContainerHeight),
                     contentPadding = SplitButtonDefaults.trailingButtonContentPaddingFor(SplitButtonDefaults.MediumContainerHeight),
                 ) { Icon(if (menu) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, stringResource(R.string.more_save_options)) }
-                // The screen is surfaceContainer, the menu's default: give it its own color so it stands out.
+                // The screen is surfaceContainer, the menu's default: lift it one tone and outline it.
+                // No shadow: a popup's shadow only shows once its enter animation ends, a visible lag.
                 val colors = MaterialTheme.colorScheme
                 DropdownMenu(
                     expanded = menu,
                     onDismissRequest = { menu = false },
                     shape = RoundedCornerShape(20.dp),
-                    containerColor = colors.tertiaryContainer,
-                    shadowElevation = 6.dp,
+                    containerColor = colors.surfaceContainerHighest,
+                    shadowElevation = 0.dp,
+                    border = BorderStroke(1.dp, colors.outlineVariant),
                 ) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.save), style = MaterialTheme.typography.titleMedium) },
                         leadingIcon = { Icon(Icons.Rounded.Save, null) },
-                        colors = MenuDefaults.itemColors(textColor = colors.onTertiaryContainer, leadingIconColor = colors.onTertiaryContainer),
+                        colors = MenuDefaults.itemColors(textColor = colors.onSurface, leadingIconColor = colors.onSurfaceVariant),
                         onClick = { menu = false; onSave() },
                     )
                 }
