@@ -4,10 +4,12 @@ package dev.vibenfs.ui
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterExitState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -30,6 +34,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.DropdownMenu
@@ -42,6 +47,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
@@ -59,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -76,6 +83,7 @@ import dev.vibenfs.nfs.NfsClient
 import dev.vibenfs.nfs.NfsVersion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -101,6 +109,8 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
     var gid by rememberSaveable { mutableStateOf(existing?.gid?.takeIf { it >= 0 }?.toString().orEmpty()) }
     var readOnly by rememberSaveable { mutableStateOf(existing?.readOnly ?: false) }
     var advanced by rememberSaveable { mutableStateOf(port.isNotEmpty() || uid.isNotEmpty() || gid.isNotEmpty()) }
+    var revealAdvanced by remember { mutableStateOf(false) }
+    val advancedView = remember { BringIntoViewRequester() }
     var showErrors by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var exports by remember { mutableStateOf(emptyList<String>()) }
@@ -263,11 +273,17 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
             Switch(checked = readOnly, onCheckedChange = { readOnly = it })
         }
 
-        TextButton(onClick = { advanced = !advanced }) {
+        TextButton(onClick = { advanced = !advanced; revealAdvanced = advanced }) {
             Text(stringResource(R.string.advanced))
             Icon(if (advanced) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null)
         }
-        AnimatedVisibility(advanced) {
+        AnimatedVisibility(advanced, Modifier.bringIntoViewRequester(advancedView)) {
+            // The section opens below the fold, often unnoticed: scroll it into view once it has grown.
+            if (revealAdvanced) LaunchedEffect(Unit) {
+                snapshotFlow { transition.currentState }.first { it == EnterExitState.Visible }
+                advancedView.bringIntoView()
+                revealAdvanced = false
+            }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BigField(
                     stringResource(R.string.field_port), port, { extra = emptyList(); port = it.filter(Char::isDigit).take(5).takeIf { p -> (p.toIntOrNull() ?: 0) <= 65535 } ?: port },
@@ -291,10 +307,12 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
         test?.let { TestCard(it) }
     }
         // Pinned action bar: always reachable, even with the keyboard up.
-        Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 12.dp).widthIn(max = 640.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        // Flow, so at large font scales the save button moves to its own line instead of squeezing.
+        FlowRow(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).widthIn(max = 640.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(onClick = {
                 val v = build(false) ?: return@TextButton
@@ -309,7 +327,6 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
                     }
                 }
             }) { Text(stringResource(R.string.test_connection)) }
-            Spacer(Modifier.weight(1f))
             // Plain save keeps the current mount state; only the primary action mounts.
             SaveSplitButton(onSaveAndMount = { save(true) }, onSave = { save(existing?.mounted ?: false) })
         }
@@ -371,12 +388,26 @@ private fun SaveSplitButton(onSaveAndMount: () -> Unit, onSave: () -> Unit) {
         trailingButton = {
             Box {
                 SplitButtonDefaults.TrailingButton(
-                    onClick = { menu = true },
+                    checked = menu,
+                    onCheckedChange = { menu = it },
                     shapes = SplitButtonDefaults.trailingButtonShapesFor(SplitButtonDefaults.MediumContainerHeight),
                     contentPadding = SplitButtonDefaults.trailingButtonContentPaddingFor(SplitButtonDefaults.MediumContainerHeight),
-                ) { Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.more_save_options)) }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text(stringResource(R.string.save)) }, onClick = { menu = false; onSave() })
+                ) { Icon(if (menu) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, stringResource(R.string.more_save_options)) }
+                // The screen is surfaceContainer, the menu's default: give it its own color so it stands out.
+                val colors = MaterialTheme.colorScheme
+                DropdownMenu(
+                    expanded = menu,
+                    onDismissRequest = { menu = false },
+                    shape = RoundedCornerShape(20.dp),
+                    containerColor = colors.tertiaryContainer,
+                    shadowElevation = 6.dp,
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.save), style = MaterialTheme.typography.titleMedium) },
+                        leadingIcon = { Icon(Icons.Rounded.Save, null) },
+                        colors = MenuDefaults.itemColors(textColor = colors.onTertiaryContainer, leadingIconColor = colors.onTertiaryContainer),
+                        onClick = { menu = false; onSave() },
+                    )
                 }
             }
         },
