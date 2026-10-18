@@ -47,18 +47,30 @@ class NfsClient private constructor(private var handle: Long) : Closeable {
             System.loadLibrary("vibenfs")
         }
 
+        private const val NFS_V4_2 = 42 // libnfs' NFS_V4_2 dialect
+
         /**
          * @param port 0 = discover via portmapper, otherwise NFS and MOUNT on this port.
          * @param uid/gid AUTH_SYS identity, -1 keeps libnfs' default. Throws IOException on failure.
          */
         fun mount(host: String, export: String, version: NfsVersion, port: Int = 0, uid: Int = -1, gid: Int = -1, timeoutMs: Int = 10_000): NfsClient {
-            fun attemptPath(v: NfsVersion, path: String) = try {
-                NfsClient(nMount(host, path, v.wire, port, true, uid, gid, timeoutMs))
+            fun attemptWire(wire: Int, path: String) = try {
+                NfsClient(nMount(host, path, wire, port, true, uid, gid, timeoutMs))
             } catch (e: IOException) {
                 // Servers without MOUNT EXPORT (common for userspace ones) can't do nested-export
                 // traversal; mount them flat instead of failing.
                 if (e.message.orEmpty().contains("Procedure not available")) {
-                    NfsClient(nMount(host, path, v.wire, port, false, uid, gid, timeoutMs))
+                    NfsClient(nMount(host, path, wire, port, false, uid, gid, timeoutMs))
+                } else throw e
+            }
+
+            fun attemptPath(v: NfsVersion, path: String) = try {
+                attemptWire(v.wire, path)
+            } catch (e: IOException) {
+                // Servers with NFSv4.0 disabled (nfs.conf vers4.0=n, default on some distros) answer
+                // SETCLIENTID with MINOR_VERS_MISMATCH: speak NFSv4.2 with sessions instead.
+                if (v == NfsVersion.V4 && "MINOR_VERS_MISMATCH" in e.message.orEmpty()) {
+                    attemptWire(NFS_V4_2, path).also { Log.i("VibeNFS", "NFSv4.0 refused, using NFSv4.2") }
                 } else throw e
             }
 
