@@ -1,0 +1,118 @@
+name: Release APK
+
+# Every push to master refreshes the rolling "latest" pre-release, whose only asset is
+# vibenfs.apk - a direct download, no zip. (Build artifacts are always zipped by GitHub,
+# which is why the APK is published as a release asset instead.)
+# Publishing a real release attaches the APK to that release too.
+#
+# This repository is public: the signing key only ever comes from repository secrets, is
+# written under $RUNNER_TEMP, and nothing but the APK is uploaded. Pull requests never run
+# this workflow, so forks cannot reach the secrets, and a manual run only works from master.
+# Actions are pinned to commit SHAs because they run with the signing secrets in scope.
+on:
+  push:
+    branches: [master]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions: {}
+
+# Queue, never cancel: a run killed between deleting and recreating "latest" would leave
+# the download link dead.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    if: github.event_name == 'release' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed to publish the release and its asset
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive # libnfs
+          persist-credentials: false # keep the token out of .git/config, where build code could read it
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+
+      # The native client needs the exact NDK and CMake that app/build.gradle.kts pins.
+      - name: Install NDK and CMake
+        run: sdkmanager --install "ndk;29.0.14206865" "cmake;4.1.2" > /dev/null
+
+      # Android refuses to update an installed app whose signature differs, and a runner has no
+      # keystore of its own: AGP makes a brand-new debug key on the spot, so every build would be
+      # signed by a different certificate. One key, kept in the repository's secrets, makes every
+      # build updatable. See docs/signing.md.
+      - name: Use the signing key, when one is configured
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::No SIGNING_KEYSTORE_BASE64 secret. This APK gets a throwaway debug key," \
+                 "so installing it over an earlier build will fail on the signature. See docs/signing.md."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing.jks"
+          # Java properties treat \ as an escape: double it so passwords arrive unchanged.
+          esc() { printf '%s' "${1//\\/\\\\}"; }
+          {
+            echo "storeFile=$RUNNER_TEMP/signing.jks"
+            echo "storePassword=$(esc "$STORE_PASSWORD")"
+            echo "keyAlias=$(esc "$KEY_ALIAS")"
+            echo "keyPassword=$(esc "$KEY_PASSWORD")"
+          } > keystore.properties
+
+      - name: Build the release APK
+        # Tests first: a red test must not produce a downloadable APK.
+        run: ./gradlew :app:testDebugUnitTest :app:assembleRelease
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/signing.jks"
+
+      - run: cp app/build/outputs/apk/release/app-release.apk vibenfs.apk
+
+      # The fingerprint goes in the release notes: two builds with the same one install over each
+      # other, two with different ones never will. A certificate fingerprint is public information.
+      - name: Read the signature back off the APK
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          FINGERPRINT=$("$APKSIGNER" verify --print-certs vibenfs.apk | grep -i 'SHA-256 digest' | head -1 | cut -d: -f2- | tr -d ' ')
+          echo "SIGNER_SHA256=$FINGERPRINT" >> "$GITHUB_ENV"
+          echo "Signed by SHA-256 $FINGERPRINT"
+
+      - name: Refresh the rolling "latest" release
+        if: github.event_name != 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Recreate it so the tag follows master instead of rotting on an old commit.
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest vibenfs.apk \
+            --title "Latest build" \
+            --notes "Automatic build of \`${GITHUB_SHA::7}\`. Download **vibenfs.apk** below (Android 14+).
+
+          Signing certificate \`${SIGNER_SHA256}\`. A build with a different fingerprint cannot be
+          installed over this one: uninstall first, which also removes your saved network folders
+          (files on your servers are never touched)." \
+            --prerelease \
+            --target "$GITHUB_SHA"
+
+      - name: Attach the APK to a published release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }} # via env, never interpolated into the script
+        run: gh release upload "$TAG" vibenfs.apk --clobber

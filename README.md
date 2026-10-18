@@ -9,13 +9,14 @@
   <img alt="Android 14+" src="https://img.shields.io/badge/Android-14%2B-3DDC84?logo=android&logoColor=white">
   <img alt="NFS v3 and v4" src="https://img.shields.io/badge/NFS-v3%20%7C%20v4-6B2FD1">
   <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white">
+  <a href="https://github.com/NicoNex/VibesNFS/releases/tag/latest"><img alt="Download APK" src="https://img.shields.io/badge/download-APK-2ea44f?logo=android&logoColor=white"></a>
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-Material%203%20Expressive-4285F4?logo=jetpackcompose&logoColor=white">
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/list.png" width="240" alt="VibeNFS folder list with a mounted NFS share, free space and protocol version">
-  <img src="docs/screenshots/files.png" width="240" alt="An NFS share open in the Android system Files app">
-  <img src="docs/screenshots/sheet.png" width="240" alt="Quick Settings panel to mount and unmount NFS folders">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_list.png" width="240" alt="VibeNFS folder list with a mounted NFS share, free space and protocol version">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_files.png" width="240" alt="An NFS share open in the Android system Files app">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_sheet.png" width="240" alt="Quick Settings panel to mount and unmount NFS folders">
 </p>
 
 ---
@@ -30,6 +31,7 @@ Your media server, home lab or Linux box already shares folders over NFS. Your A
 - **No root, no kernel module.** A native NFS client ([libnfs](https://github.com/sahlberg/libnfs)) runs inside the app.
 - **NFSv3 and NFSv4.** *Auto* tries v4 first, since it needs only port 2049 and gets through firewalls more easily, and falls back to v3.
 - **Fast, seekable streaming.** Files open as seekable file descriptors served from the network, so you can skip through a 4K movie without downloading it first. Every open file gets its own I/O thread, and libnfs serves concurrent requests over a single connection.
+- **Thumbnails in Files.** Photos, videos and album art get previews. VibeNFS uses the preview cameras embed in the photo header when there is one, so most phone photos never cross the network in full just to draw a tile. Otherwise it decodes straight at the requested size. Thumbnails are cached until the file changes.
 - **Read and write.** Create, rename, move and delete files and folders from any app. The *Read only* switch protects shares you only want to browse.
 - **Quick Settings tile.** Tap to mount or unmount everything. Long-press for a per-folder panel, like the Wi-Fi and Bluetooth tiles.
 - **Home screen widget.** The same controls on your home screen, with live status.
@@ -43,11 +45,11 @@ Your media server, home lab or Linux box already shares folders over NFS. Your A
 
 | Your folders | Edit a folder | In the Files app |
 |:---:|:---:|:---:|
-| <img src="docs/screenshots/list.png" width="240" alt="Folder list showing mounted, error and off states"> | <img src="docs/screenshots/editor.png" width="240" alt="Editor with server address, shared path and NFS version"> | <img src="docs/screenshots/files.png" width="240" alt="NFS share browsed in the Android Files app"> |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_list.png" width="240" alt="Folder list showing mounted, error and off states"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5_editor.png" width="240" alt="Editor with server address, shared path and NFS version"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_files.png" width="240" alt="NFS share browsed in the Android Files app"> |
 | **Quick Settings tile** | **Long-press panel** | **Home screen widget** |
-| <img src="docs/screenshots/tile.png" width="240" alt="VibeNFS tile in Android Quick Settings"> | <img src="docs/screenshots/sheet.png" width="240" alt="Per-folder mount panel opened from the tile"> | <img src="docs/screenshots/widget.png" width="240" alt="Home screen widget to mount NFS folders"> |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6_tile.png" width="240" alt="VibeNFS tile in Android Quick Settings"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_sheet.png" width="240" alt="Per-folder mount panel opened from the tile"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4_widget.png" width="240" alt="Home screen widget to mount NFS folders"> |
 | **Dark theme** | | |
-| <img src="docs/screenshots/dark.png" width="240" alt="VibeNFS in dark theme with dynamic color"> | | |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7_dark.png" width="240" alt="VibeNFS in dark theme with dynamic color"> | | |
 
 ## Getting started
 
@@ -66,7 +68,9 @@ VibeNFS authenticates with `AUTH_SYS`. To access files as a specific user, set *
 
 ### 2. Install the app
 
-There are no prebuilt releases yet, so build it from source (see below). The app needs Android 14 or newer.
+Download **[vibenfs.apk](https://github.com/NicoNex/VibesNFS/releases/download/latest/vibenfs.apk)** from the [latest release](https://github.com/NicoNex/VibesNFS/releases/tag/latest), which is rebuilt automatically from every commit to `master`. You can also build it yourself (see below). The app needs Android 14 or newer.
+
+If the phone refuses to update an earlier install, the two builds were signed by different keys; [docs/signing.md](docs/signing.md) explains why.
 
 ### 3. Add a network folder
 
@@ -83,8 +87,8 @@ Requirements: JDK 21, the Android SDK (compile SDK 37), NDK `29.0.14206865` and 
 
 ```sh
 # clone with submodules (libnfs lives in app/src/main/cpp/libnfs)
-git clone --recursive <this-repo-url> VibeNFS
-cd VibeNFS
+git clone --recursive https://github.com/NicoNex/VibesNFS.git
+cd VibesNFS
 make debug          # builds vibenfs-debug.apk
 make install-debug  # builds and installs on the connected phone
 ```
@@ -112,6 +116,7 @@ Files app / any app ──SAF──▶ NfsDocumentsProvider ──▶ MountManag
 - **`nfs/`**: a thin JNI bridge over libnfs 8, built with multithreading. One NFS context per share, safe to call from any thread.
 - **`mount/`**: keeps track of which folders should be mounted, survives process death and reconnects on demand.
 - **`provider/`**: the `DocumentsProvider` that puts each share in the Files app.
+- **`provider/Thumbnails.kt`**: previews from the same seekable descriptors, via EXIF, `MediaMetadataRetriever` and `ImageDecoder`.
 - **`tile/`, `widget/`, `ui/`**: the Quick Settings tile, the Glance widget and the Compose UI.
 
 ## FAQ
@@ -133,10 +138,8 @@ Not yet. So far VibeNFS has been tested with NFSv3 against a userspace server on
 
 ## Roadmap
 
-- Thumbnails for photos and videos in the Files app
-- Prebuilt releases (GitHub, F-Droid)
+- F-Droid listing (metadata is ready in `fastlane/`)
 - Kerberos authentication
-- Nested exports on servers that use custom ports
 
 ## Contributing
 

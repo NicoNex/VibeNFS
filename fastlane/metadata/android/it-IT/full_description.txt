@@ -1,0 +1,15 @@
+<p>VibeNFS è un client NFS per Android. Aggiungi una cartella di rete, attiva l'interruttore e la condivisione compare nell'app <b>File</b> accanto alla memoria interna. Qualsiasi app che apre file dal selettore di sistema può leggere e salvare sul tuo server NFS. Senza root.</p>
+
+<ul>
+<li><b>Nell'app File:</b> ogni condivisione è una posizione del file manager di sistema (Storage Access Framework).</li>
+<li><b>NFSv3 e NFSv4:</b> Auto prova prima v4 e ripiega su v3.</li>
+<li><b>Streaming con seek:</b> scorri i film senza scaricarli prima.</li>
+<li><b>Miniature:</b> anteprime di foto, video e copertine degli album, usando l'anteprima incorporata nella foto quando c'è.</li>
+<li><b>Lettura e scrittura:</b> crea, rinomina, sposta ed elimina da qualsiasi app, oppure sola lettura.</li>
+<li><b>Riquadro nelle Impostazioni rapide:</b> tocca per montare o smontare tutto, tieni premuto per le singole cartelle.</li>
+<li><b>Widget</b> nella schermata Home con stato in tempo reale.</li>
+<li><b>Trova le condivisioni</b> sui server NFSv3, porte personalizzate e UID/GID per cartella.</li>
+<li>Design <b>Material 3 Expressive</b> con i colori dello sfondo, tema chiaro e scuro, inglese e italiano.</li>
+</ul>
+
+<p>Il server deve accettare connessioni da porte non privilegiate (opzione "insecure" degli export su Linux).</p>

@@ -12,3 +12,4 @@ captures/
 *.aab
 *.jks
 *.keystore
+*.jks.base64

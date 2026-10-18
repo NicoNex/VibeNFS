@@ -63,7 +63,7 @@ static jobject newEntry(JNIEnv *env, const char *name, int dir, uint64_t size, u
 
 JNIEXPORT jlong JNICALL
 Java_dev_vibenfs_nfs_NfsClient_nMount(JNIEnv *env, jclass clazz, jstring jhost, jstring jexport,
-                                      jint version, jint port, jint uid, jint gid, jint timeoutMs) {
+                                      jint version, jint port, jboolean traverse, jint uid, jint gid, jint timeoutMs) {
     struct nfs_context *nfs = nfs_init_context();
     if (!nfs) {
         throwIo(env, NULL, -ENOMEM, "init");
@@ -73,12 +73,11 @@ Java_dev_vibenfs_nfs_NfsClient_nMount(JNIEnv *env, jclass clazz, jstring jhost, 
     nfs_set_autoreconnect(nfs, 3); // bounded, so a vanished server fails calls instead of hanging them
     if (port > 0) {
         // Non-standard port: skip portmapper, serve MOUNT and NFS on the same port.
-        // ponytail: such servers are usually userspace and lack MOUNT EXPORT, which
-        // nested-export traversal needs; expose a toggle if someone needs both.
         nfs_set_nfsport(nfs, port);
         nfs_set_mountport(nfs, port);
-        nfs_set_auto_traverse_mounts(nfs, 0);
     }
+    // Nested-export traversal needs MOUNT EXPORT, which some userspace servers lack.
+    nfs_set_auto_traverse_mounts(nfs, traverse);
     if (uid >= 0) nfs_set_uid(nfs, uid);
     if (gid >= 0) nfs_set_gid(nfs, gid);
     int rc = nfs_set_version(nfs, version);

@@ -1,6 +1,8 @@
 package dev.vibenfs.provider
 
+import android.content.res.AssetFileDescriptor
 import android.database.Cursor
+import android.graphics.Point
 import android.database.MatrixCursor
 import android.os.CancellationSignal
 import android.os.Handler
@@ -22,6 +24,7 @@ import dev.vibenfs.mount.MountState
 import dev.vibenfs.mounts
 import dev.vibenfs.nfs.NfsClient
 import dev.vibenfs.nfs.NfsEntry
+import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.file.FileAlreadyExistsException
@@ -148,6 +151,17 @@ class NfsDocumentsProvider : DocumentsProvider() {
         moved.toString()
     }
 
+    override fun openDocumentThumbnail(documentId: String, sizeHint: Point, signal: CancellationSignal?): AssetFileDescriptor = io {
+        val doc = DocId.parse(documentId)
+        val entry = client(doc).stat(doc.path)
+        // Keyed by content identity, so an edited file gets a fresh thumbnail.
+        val key = "$documentId|${entry.size}|${entry.lastModified}|${sizeHint.x}"
+        val file = Thumbnails.cached(File(context!!.cacheDir, "thumbs"), key, mimeOf(entry.name), sizeHint, signal) {
+            openDocument(documentId, "r", signal)
+        } ?: throw FileNotFoundException("No thumbnail for ${doc.name}")
+        AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, file.length())
+    }
+
     private fun client(doc: DocId): NfsClient = mounts.client(doc.volume)
 
     private fun deleteRecursive(nfs: NfsClient, path: String, isDirectory: Boolean) {
@@ -180,13 +194,15 @@ class NfsDocumentsProvider : DocumentsProvider() {
     }
 
     private fun MatrixCursor.addEntry(doc: DocId, entry: NfsEntry, writable: Boolean) {
-        val flags = if (!writable) 0 else
+        val mime = if (entry.isDirectory) Document.MIME_TYPE_DIR else mimeOf(entry.name)
+        val thumb = if (Thumbnails.supports(mime)) Document.FLAG_SUPPORTS_THUMBNAIL else 0
+        val flags = thumb or if (!writable) 0 else
             Document.FLAG_SUPPORTS_DELETE or Document.FLAG_SUPPORTS_RENAME or Document.FLAG_SUPPORTS_MOVE or
                 if (entry.isDirectory) Document.FLAG_DIR_SUPPORTS_CREATE else Document.FLAG_SUPPORTS_WRITE
         newRow().apply {
             add(Document.COLUMN_DOCUMENT_ID, doc.toString())
             add(Document.COLUMN_DISPLAY_NAME, entry.name)
-            add(Document.COLUMN_MIME_TYPE, if (entry.isDirectory) Document.MIME_TYPE_DIR else mimeOf(entry.name))
+            add(Document.COLUMN_MIME_TYPE, mime)
             add(Document.COLUMN_SIZE, entry.size)
             add(Document.COLUMN_LAST_MODIFIED, entry.lastModified)
             add(Document.COLUMN_FLAGS, flags)

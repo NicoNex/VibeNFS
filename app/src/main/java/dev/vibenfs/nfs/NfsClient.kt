@@ -50,7 +50,15 @@ class NfsClient private constructor(private var handle: Long) : Closeable {
          * @param uid/gid AUTH_SYS identity, -1 keeps libnfs' default. Throws IOException on failure.
          */
         fun mount(host: String, export: String, version: NfsVersion, port: Int = 0, uid: Int = -1, gid: Int = -1, timeoutMs: Int = 10_000): NfsClient {
-            fun attempt(v: NfsVersion) = NfsClient(nMount(host, export, v.wire, port, uid, gid, timeoutMs))
+            fun attempt(v: NfsVersion) = try {
+                NfsClient(nMount(host, export, v.wire, port, true, uid, gid, timeoutMs))
+            } catch (e: IOException) {
+                // Servers without MOUNT EXPORT (common for userspace ones) can't do nested-export
+                // traversal; mount them flat instead of failing.
+                if (e.message.orEmpty().contains("Procedure not available")) {
+                    NfsClient(nMount(host, export, v.wire, port, false, uid, gid, timeoutMs))
+                } else throw e
+            }
             if (version != NfsVersion.AUTO) return attempt(version)
             // AUTO prefers v4 (single port, firewall friendly) and falls back to v3,
             // except when the server is simply unreachable: then v3 would just time out again.
@@ -69,7 +77,7 @@ class NfsClient private constructor(private var handle: Long) : Closeable {
         /** Exports advertised by the server's MOUNT service (NFSv3); empty if none or unreachable. */
         fun exports(host: String, port: Int = 0): List<String> = nExports(host, port).asList()
 
-        @JvmStatic private external fun nMount(host: String, export: String, version: Int, port: Int, uid: Int, gid: Int, timeoutMs: Int): Long
+        @JvmStatic private external fun nMount(host: String, export: String, version: Int, port: Int, traverse: Boolean, uid: Int, gid: Int, timeoutMs: Int): Long
         @JvmStatic private external fun nUmount(ctx: Long)
         @JvmStatic private external fun nExports(host: String, port: Int): Array<String>
         @JvmStatic private external fun nList(ctx: Long, path: String): Array<NfsEntry>
