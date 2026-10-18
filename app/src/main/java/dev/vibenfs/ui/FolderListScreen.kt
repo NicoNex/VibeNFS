@@ -21,6 +21,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -296,14 +297,14 @@ fun SpinningShape(color: Color, modifier: Modifier = Modifier, size: Int = 170, 
 @Composable
 private fun EmptyState(onAdd: () -> Unit, padding: PaddingValues) {
     val colors = MaterialTheme.colorScheme
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(horizontal = 20.dp, vertical = 16.dp),
-    ) {
+    // One page, no scrolling: the illustration takes whatever height the text and button leave.
+    Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp, vertical = 16.dp)) {
         MonoLabel("VibeNFS", size = 13)
-        Box(Modifier.fillMaxWidth().height(320.dp)) {
-            SpinningShape(colors.primary, Modifier.align(Alignment.Center), size = 300, shape = MaterialShapes.SoftBurst, periodMs = 60_000)
-            SpinningShape(colors.tertiaryContainer, Modifier.align(Alignment.BottomEnd), size = 110, periodMs = 20_000)
-            FolderBadge(MaterialShapes.Circle.toShape(), Color.Transparent, colors.onPrimary, 220, Modifier.align(Alignment.Center))
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+            val side = minOf(maxWidth, maxHeight, 320.dp).value.toInt()
+            SpinningShape(colors.primary, Modifier.align(Alignment.Center), size = side * 15 / 16, shape = MaterialShapes.SoftBurst, periodMs = 60_000)
+            SpinningShape(colors.tertiaryContainer, Modifier.align(Alignment.BottomEnd), size = side * 11 / 32, periodMs = 20_000)
+            FolderBadge(MaterialShapes.Circle.toShape(), Color.Transparent, colors.onPrimary, side * 11 / 16, Modifier.align(Alignment.Center))
         }
         PosterTitle(stringResource(R.string.empty_title))
         Text(
@@ -312,7 +313,7 @@ private fun EmptyState(onAdd: () -> Unit, padding: PaddingValues) {
             color = colors.onSurfaceVariant,
             modifier = Modifier.padding(top = 14.dp).widthIn(max = 320.dp),
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(24.dp))
         Button(onClick = onAdd, modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 72.dp), contentPadding = ButtonDefaults.MediumContentPadding) {
             Icon(Icons.Rounded.Add, null)
             Spacer(Modifier.size(10.dp))
