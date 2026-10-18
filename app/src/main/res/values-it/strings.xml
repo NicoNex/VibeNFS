@@ -1,7 +1,7 @@
 <resources>
     <string name="folders_title">Cartelle di rete</string>
     <string name="add_folder">Aggiungi cartella di rete</string>
-    <string name="empty_title">Ancora niente in rete</string>
+    <string name="empty_title">Niente\nin rete.</string>
     <string name="empty_body">Aggiungi una condivisione NFS e la trovi nell\'app File, come qualsiasi altra unità.</string>
     <string name="state_mounted">Montata</string>
     <string name="state_off">Spenta</string>
@@ -46,4 +46,18 @@
     </plurals>
     <string name="widget_description">Monta e smonta le tue cartelle di rete</string>
     <string name="connection_error">Connessione non riuscita</string>
+
+    <string name="folders_poster">Cartelle</string>
+    <string name="stats_line">%1$02d cartelle · %2$02d montate</string>
+    <string name="free_short">%1$s liberi</string>
+    <string name="label_free">Liberi</string>
+    <string name="label_total">Totale</string>
+    <string name="a11y_mount">Monta %1$s</string>
+    <string name="a11y_unmount">Smonta %1$s</string>
+    <string name="turn_off">Spegni</string>
+    <string name="back">Indietro</string>
+    <string name="read_only_body">File può sfogliare ma non modificare nulla</string>
+    <string name="more_save_options">Altre opzioni di salvataggio</string>
+    <string name="open_app">Apri VibeNFS</string>
+    <string name="mounted_ratio">%1$d / %2$d attive</string>
 </resources>

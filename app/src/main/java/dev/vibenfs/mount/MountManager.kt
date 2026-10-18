@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -49,7 +50,10 @@ class MountManager(private val context: Context) {
     private val locks = ConcurrentHashMap<String, Mutex>()
     private fun lock(id: String) = locks.getOrPut(id) { Mutex() }
 
-    val volumes: StateFlow<List<Volume>> = store.data.stateIn(scope, SharingStarted.Eagerly, emptyList())
+    /** Null until DataStore has loaded, so the UI never flashes the empty state. */
+    val volumes: StateFlow<List<Volume>?> = store.data
+        .catch { Log.w("MountManager", it); emit(emptyList()) } // an unreadable store must not hold the splash forever
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
     private val _states = MutableStateFlow<Map<String, MountState>>(emptyMap())
     val states: StateFlow<Map<String, MountState>> = _states.asStateFlow()
@@ -81,10 +85,17 @@ class MountManager(private val context: Context) {
         notifyChanged()
     }
 
-    suspend fun setAllMounted(mounted: Boolean) = coroutineScope {
-        store.data.first().forEach { launch { setMounted(it.id, mounted) } }
+    /** One store write and one notification for the whole batch; connects run in parallel. */
+    suspend fun setAllMounted(mounted: Boolean) {
+        val all = store.updateData { list -> list.map { it.copy(mounted = mounted) } }
+        coroutineScope { all.forEach { launch { if (mounted) runCatching { connect(it.id) } else disconnect(it.id) } } }
+        notifyChanged()
     }
 
+    fun saveInBackground(volume: Volume) = scope.launch { save(volume) }
+    fun deleteInBackground(id: String) = scope.launch { delete(id) }
+    fun mount(id: String, mounted: Boolean) = scope.launch { setMounted(id, mounted) }
+    fun setAllInBackground(mounted: Boolean) = scope.launch { setAllMounted(mounted) }
     fun toggleAll() = scope.launch { setAllMounted(store.data.first().none { it.mounted }) }
     fun toggle(id: String) = scope.launch {
         store.data.first().firstOrNull { it.id == id }?.let { setMounted(id, !it.mounted) }

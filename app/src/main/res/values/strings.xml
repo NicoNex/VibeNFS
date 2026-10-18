@@ -4,7 +4,7 @@
     <!-- Folder list -->
     <string name="folders_title">Network folders</string>
     <string name="add_folder">Add network folder</string>
-    <string name="empty_title">Nothing on the network yet</string>
+    <string name="empty_title">Nothing on\nthe net.</string>
     <string name="empty_body">Add an NFS share and it shows up in the Files app, like any other drive.</string>
     <string name="state_mounted">Mounted</string>
     <string name="state_off">Off</string>
@@ -51,4 +51,19 @@
     </plurals>
     <string name="widget_description">Mount and unmount your network folders</string>
     <string name="connection_error">Connection failed</string>
+
+    <!-- Editorial bits -->
+    <string name="folders_poster">Folders</string>
+    <string name="stats_line">%1$02d folders · %2$02d mounted</string>
+    <string name="free_short">%1$s free</string>
+    <string name="label_free">Free</string>
+    <string name="label_total">Total</string>
+    <string name="a11y_mount">Mount %1$s</string>
+    <string name="a11y_unmount">Unmount %1$s</string>
+    <string name="turn_off">Turn off</string>
+    <string name="back">Back</string>
+    <string name="read_only_body">Files can browse but not change anything</string>
+    <string name="more_save_options">More save options</string>
+    <string name="open_app">Open VibeNFS</string>
+    <string name="mounted_ratio">%1$d / %2$d on</string>
 </resources>
