@@ -7,6 +7,7 @@ import dev.vibenfs.R
 import dev.vibenfs.data.Volume
 import dev.vibenfs.data.volumeStore
 import dev.vibenfs.nfs.NfsClient
+import dev.vibenfs.widget.FoldersWidget
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -59,6 +63,11 @@ class MountManager(private val context: Context) {
     val states: StateFlow<Map<String, MountState>> = _states.asStateFlow()
 
     init {
+        // Home screen widgets render outside the app: push every state change to them.
+        scope.launch {
+            combine(volumes.filterNotNull(), states) { _, _ -> }.debounce(250)
+                .collect { runCatching { FoldersWidget.refresh(context) } } // one failed update must not stop the rest
+        }
         // Restore connections the user left mounted before the process died.
         scope.launch {
             store.data.first().filter { it.mounted }.forEach { launch { runCatching { connect(it.id) }; notifyChanged() } }
