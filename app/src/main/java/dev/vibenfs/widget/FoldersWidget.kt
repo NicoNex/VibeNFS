@@ -1,6 +1,8 @@
 package dev.vibenfs.widget
 
 import android.content.Context
+import android.content.Intent
+import android.provider.DocumentsContract
 import android.text.format.Formatter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,6 +17,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
+import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -22,6 +25,7 @@ import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
@@ -44,8 +48,10 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import dev.vibenfs.MainActivity
 import dev.vibenfs.R
 import dev.vibenfs.data.Volume
+import dev.vibenfs.mount.MountManager
 import dev.vibenfs.mount.MountState
 import dev.vibenfs.mounts
 import dev.vibenfs.ui.friendlyErrorRes
@@ -168,13 +174,16 @@ private fun VolumeRow(context: Context, volume: Volume, state: MountState?) {
                 .clickable(actionRunCallback<MountAction>(actionParametersOf(VolumeId to volume.id))),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Widgets get no long-press (the launcher keeps it for moving), so the secondary actions
+            // sit on the row: the icon chip opens the app, the trailing button opens Files.
             // Icon chip: filled when on, outline-quiet when off, so state reads at a glance.
             Box(
-                GlanceModifier.size(36.dp).cornerRadius(18.dp).background(if (lit) colors.onPrimary else colors.surface),
+                GlanceModifier.size(36.dp).cornerRadius(18.dp).background(if (lit) colors.onPrimary else colors.surface)
+                    .clickable(actionStartActivity<MainActivity>()),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    ImageProvider(R.drawable.ic_tile_nfs), null, GlanceModifier.size(20.dp),
+                    ImageProvider(R.drawable.ic_tile_nfs), context.getString(R.string.open_app), GlanceModifier.size(20.dp),
                     colorFilter = androidx.glance.ColorFilter.tint(if (lit) colors.primary else body),
                 )
             }
@@ -189,6 +198,20 @@ private fun VolumeRow(context: Context, volume: Volume, state: MountState?) {
                         modifier = GlanceModifier.fillMaxWidth().height(4.dp),
                         color = colors.onPrimary,
                         backgroundColor = ColorProvider(R.color.widget_track),
+                    )
+                }
+            }
+            if (state is MountState.Mounted) {
+                Spacer(GlanceModifier.width(6.dp))
+                val root = DocumentsContract.buildRootUri(MountManager.AUTHORITY, volume.id)
+                Box(
+                    GlanceModifier.size(36.dp).cornerRadius(18.dp)
+                        .clickable(actionStartActivity(Intent(Intent.ACTION_VIEW).setDataAndType(root, DocumentsContract.Root.MIME_TYPE_ITEM))),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        ImageProvider(R.drawable.ic_open_in_new), context.getString(R.string.open_in_files), GlanceModifier.size(20.dp),
+                        colorFilter = androidx.glance.ColorFilter.tint(title),
                     )
                 }
             }

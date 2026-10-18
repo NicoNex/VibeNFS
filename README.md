@@ -37,7 +37,7 @@ Your media server, home lab or Linux box already shares folders over NFS. Your A
 - **Survives network changes.** Switch from Wi-Fi to mobile data and back: mounted folders reconnect on the new network in the background, with no stuck connection and no reboot.
 - **Read and write.** Create, rename, move and delete files and folders from any app. The *Read only* switch protects shares you only want to browse.
 - **Quick Settings tile.** Tap to mount or unmount everything. Long-press for a per-folder panel, like the Wi-Fi and Bluetooth tiles.
-- **Home screen widget.** The same controls on your home screen. Each folder is a button that lights up while it's mounted and shows its free space, the server while it's off, or what went wrong.
+- **Home screen widget.** The same controls on your home screen. Each folder is a button that lights up while it's mounted and shows its free space, the server while it's off, or what went wrong. Its icon opens the app; the arrow opens the folder in Files.
 - **Finds shares for you.** Type the address of an NFSv3 server and VibeNFS lists its exported paths; tap one to fill in the field. NFSv4-only servers don't publish that list, so type the path yourself.
 - **Multiple servers and exports.** Add as many network folders as you want, each with its own protocol, port and UID/GID. Tick several exports of one server to add them all at once.
 - **NFSv4 pseudo-root aware.** Use the path the server lists (`/srv/nfs4/media`) even when NFSv4 serves it as `/media`: if NFSv4 can't find the full path, VibeNFS tries the shorter ones.
