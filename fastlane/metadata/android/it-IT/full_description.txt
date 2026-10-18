@@ -4,6 +4,7 @@
 <li><b>Nell'app File:</b> ogni condivisione è una posizione del file manager di sistema (Storage Access Framework).</li>
 <li><b>NFSv3 e NFSv4:</b> Auto prova prima v4 e ripiega su v3.</li>
 <li><b>Streaming con seek:</b> scorri i film senza scaricarli prima.</li>
+<li><b>Resiste ai cambi di rete:</b> passa dal Wi-Fi ai dati mobili e le cartelle si ricollegano da sole.</li>
 <li><b>Miniature:</b> anteprime di foto, video e copertine degli album, usando l'anteprima incorporata nella foto quando c'è.</li>
 <li><b>Lettura e scrittura:</b> crea, rinomina, sposta ed elimina da qualsiasi app, oppure sola lettura.</li>
 <li><b>Riquadro nelle Impostazioni rapide:</b> tocca per montare o smontare tutto, tieni premuto per le singole cartelle.</li>

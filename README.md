@@ -16,9 +16,9 @@
 </p>
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_list.png" width="240" alt="VibeNFS folder list with a mounted NFS share, free space and protocol version">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_files.png" width="240" alt="An NFS share open in the Android system Files app">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_sheet.png" width="240" alt="Quick Settings panel to mount and unmount NFS folders">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/01_list.png" width="240" alt="VibeNFS folder list with a mounted NFS share, free space and protocol version">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/03_files.png" width="240" alt="An NFS share open in the Android system Files app">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/08_list_dark.png" width="240" alt="VibeNFS folder list in dark theme">
 </p>
 
 ---
@@ -31,28 +31,39 @@ Your media server, home lab or Linux box already shares folders over NFS. Your A
 
 - **Shows up in the Files app.** Each mounted share appears as its own location in the system file manager, using Android's Storage Access Framework (`DocumentsProvider`). There's no extra file browser to learn.
 - **No root, no kernel module.** A native NFS client ([libnfs](https://github.com/sahlberg/libnfs)) runs inside the app.
-- **NFSv3 and NFSv4.** *Auto* tries v4 first, since it needs only port 2049 and gets through firewalls more easily, and falls back to v3.
-- **Fast, seekable streaming.** Files open as seekable file descriptors served from the network, so you can skip through a 4K movie without downloading it first. Every open file gets its own I/O thread, and libnfs serves concurrent requests over a single connection.
+- **NFSv3 and NFSv4.** *Auto* tries v4 first, since it needs only port 2049 and gets through firewalls more easily, and falls back to v3. NFSv4 speaks 4.2 and drops to 4.0 for servers that don't have it, so it also works with servers that turned 4.0 off.
+- **Fast, seekable streaming.** Files open as seekable file descriptors served from the network, so you can skip through a 4K movie without downloading it first. Apps read a few KiB at a time and each network round trip costs the full latency, so VibeNFS reads 512 KiB blocks, and once you read sequentially it fetches the next blocks in parallel, like the kernel's readahead. A photo over a VPN takes a handful of round trips instead of hundreds.
 - **Thumbnails in Files.** Photos, videos and album art get previews. VibeNFS uses the preview cameras embed in the photo header when there is one, so most phone photos never cross the network in full just to draw a tile. Otherwise it decodes straight at the requested size. Thumbnails are cached until the file changes.
+- **Survives network changes.** Switch from Wi-Fi to mobile data and back: mounted folders reconnect on the new network in the background, with no stuck connection and no reboot.
 - **Read and write.** Create, rename, move and delete files and folders from any app. The *Read only* switch protects shares you only want to browse.
 - **Quick Settings tile.** Tap to mount or unmount everything. Long-press for a per-folder panel, like the Wi-Fi and Bluetooth tiles.
-- **Home screen widget.** The same controls on your home screen, with live status.
+- **Home screen widget.** The same controls on your home screen. Each folder is a button that lights up while it's mounted and shows its free space, the server while it's off, or what went wrong.
 - **Finds shares for you.** Type the address of an NFSv3 server and VibeNFS lists its exported paths; tap one to fill in the field. NFSv4-only servers don't publish that list, so type the path yourself.
 - **Multiple servers and exports.** Add as many network folders as you want, each with its own protocol, port and UID/GID. Tick several exports of one server to add them all at once.
 - **NFSv4 pseudo-root aware.** Use the path the server lists (`/srv/nfs4/media`) even when NFSv4 serves it as `/media`: if NFSv4 can't find the full path, VibeNFS tries the shorter ones.
 - **Clear errors.** "Server unreachable" or "Access denied by the server" instead of raw RPC codes.
-- **Material 3 Expressive.** Big editorial type and expressive shapes and motion. All colors come from your wallpaper (Material You), in light and dark.
+- **Material 3 Expressive.** Big editorial type and expressive shapes and motion. All colors come from your wallpaper (Material You), in light and dark. The back gesture previews the screen underneath, as it does between apps.
 - **English and Italian.**
 
 ## Screenshots
 
 | Your folders | Edit a folder | In the Files app |
 |:---:|:---:|:---:|
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_list.png" width="240" alt="Folder list showing mounted, error and off states"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5_editor.png" width="240" alt="Editor with server address, shared path and NFS version"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_files.png" width="240" alt="NFS share browsed in the Android Files app"> |
-| **Quick Settings tile** | **Long-press panel** | **Home screen widget** |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6_tile.png" width="240" alt="VibeNFS tile in Android Quick Settings"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_sheet.png" width="240" alt="Per-folder mount panel opened from the tile"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4_widget.png" width="240" alt="Home screen widget to mount NFS folders"> |
-| **Dark theme** | | |
-| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7_dark.png" width="240" alt="VibeNFS in dark theme with dynamic color"> | | |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/01_list.png" width="240" alt="Folder list showing mounted, error and off states"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/02_editor.png" width="240" alt="Editor with server address, shared path and NFS version"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/03_files.png" width="240" alt="NFS share browsed in the Android Files app"> |
+| **Long-press panel** | **Home screen widget** | **Quick Settings tile** |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/04_sheet.png" width="240" alt="Per-folder mount panel opened from the tile"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/05_widget.png" width="240" alt="Home screen widget with lit buttons for mounted folders and free space"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/06_tile.png" width="240" alt="VibeNFS tile in Android Quick Settings"> |
+| **First launch** | | |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/07_empty.png" width="240" alt="Empty state inviting you to add a network folder"> | | |
+
+### Dark theme
+
+| Your folders | Edit a folder | In the Files app |
+|:---:|:---:|:---:|
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/08_list_dark.png" width="240" alt="Folder list in dark theme"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/09_editor_dark.png" width="240" alt="Folder editor in dark theme"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/10_files_dark.png" width="240" alt="NFS share in the Files app, dark theme"> |
+| **Long-press panel** | **Home screen widget** | **Quick Settings tile** |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/11_sheet_dark.png" width="240" alt="Per-folder mount panel in dark theme"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/12_widget_dark.png" width="240" alt="Home screen widget in dark theme"> | <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/13_tile_dark.png" width="240" alt="VibeNFS tile in dark Quick Settings"> |
+| **First launch** | | |
+| <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/14_empty_dark.png" width="240" alt="Empty state in dark theme"> | | |
 
 ## Getting started
 
@@ -80,7 +91,7 @@ If the phone refuses to update an earlier install, the two builds were signed by
 1. Tap **Add network folder**.
 2. Enter the server address. VibeNFS lists the shares it finds; tap one, or type the path yourself.
 3. Tap **Test connection**, then **Save and mount**.
-4. Open the **Files** app: your folder is in the side menu.
+4. Open the **Files** app. On Pixel phones, scroll to *All storage* and tap **Other storage**; in the system file manager the folder is in the side menu. **Open in Files** in VibeNFS takes you straight there.
 
 On Android 17, the system asks for permission to access devices on your local network the first time. VibeNFS needs it to reach the server.
 
@@ -117,9 +128,10 @@ Files app / any app ──SAF──▶ NfsDocumentsProvider ──▶ MountManag
 ```
 
 - **`nfs/`**: a thin JNI bridge over libnfs 8, built with multithreading. One NFS context per share, safe to call from any thread.
-- **`mount/`**: keeps track of which folders should be mounted, survives process death and reconnects on demand.
+- **`mount/`**: keeps track of which folders should be mounted, survives process death, reconnects on demand and moves connections to a new network when the phone switches.
 - **`provider/`**: the `DocumentsProvider` that puts each share in the Files app.
-- **`provider/Thumbnails.kt`**: previews from the same seekable descriptors, via EXIF, `MediaMetadataRetriever` and `ImageDecoder`.
+- **`provider/BlockReader.kt`**: block cache with parallel read-ahead, shared by the file descriptors handed to apps and by the thumbnailer.
+- **`provider/Thumbnails.kt`**: previews read straight over NFS, never through the app's own file descriptors, via EXIF, `MediaMetadataRetriever` (with a `MediaDataSource`) and `ImageDecoder`.
 - **`tile/`, `widget/`, `ui/`**: the Quick Settings tile, the Glance widget and the Compose UI.
 
 ## FAQ
@@ -127,20 +139,23 @@ Files app / any app ──SAF──▶ NfsDocumentsProvider ──▶ MountManag
 **Does it need root?**
 No. VibeNFS doesn't use the kernel NFS client. Everything runs in the app.
 
+**Why isn't my folder on the Files home screen, next to my USB stick?**
+That spot is only for disks Android mounts itself, which takes root for NFS. Your folder is under **Other storage** in Files by Google, or in the side menu of the system file manager, next to Google Drive.
+
 **Can other apps open my NFS files?**
 Yes, any app that uses the system file picker (Storage Access Framework). Apps that only scan local storage directly won't see the share.
 
 **Which NFS versions are supported?**
-NFSv3 and NFSv4.0. Kerberos (`sec=krb5`) isn't supported yet.
+NFSv3, NFSv4.0 and NFSv4.2. Kerberos (`sec=krb5`) isn't supported yet.
 
 **Does it keep a connection open in the background?**
-No background service or persistent notification. Mounting connects right away. If the app is closed or the network drops, the connection reopens on the next use.
+No background service or persistent notification. Mounting connects right away. If the app is closed, the connection reopens on the next use; if the phone changes network, it reconnects on the new one.
 
 **"Server refused this device", "RPC Packet not accepted" or `MNT3ERR_ACCES`?**
 The server rejects clients on non-privileged ports, and every Android app is one. Add `insecure` to each export, including the NFSv4 root (`fsid=0`), and make sure the client list includes your phone's address. On a VPN such as Tailscale or NetBird that's usually `100.64.0.0/10`. Then run `sudo exportfs -ra`. Listing exports still works without this, which is why the shares can show up while mounting fails.
 
 **Is it tested on real NAS hardware?**
-Not yet. So far VibeNFS has been tested with NFSv3 against a userspace server on the Android 17 emulator. NFSv4 and real NAS boxes (Synology, TrueNAS, Unraid, Linux `nfsd`) still need testing. Reports are very welcome.
+Partly. VibeNFS is tested with NFSv3 against a userspace server on the Android 17 emulator, and with NFSv4.2 against Linux `nfsd` over a VPN on a real phone. NAS boxes (Synology, TrueNAS, Unraid) still need testing. Reports are very welcome.
 
 ## Roadmap
 

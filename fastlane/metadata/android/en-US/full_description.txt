@@ -4,6 +4,7 @@
 <li><b>Shows up in the Files app:</b> each share is a location in the system file manager (Storage Access Framework).</li>
 <li><b>NFSv3 and NFSv4:</b> Auto tries v4 first and falls back to v3.</li>
 <li><b>Seekable streaming:</b> skip through movies without downloading them first.</li>
+<li><b>Survives network changes:</b> switch between Wi-Fi and mobile data and your folders reconnect on their own.</li>
 <li><b>Thumbnails:</b> previews for photos, videos and album art, using the preview embedded in the photo when there is one.</li>
 <li><b>Read and write:</b> create, rename, move and delete from any app, or keep a share read only.</li>
 <li><b>Quick Settings tile:</b> tap to mount or unmount everything, long-press for single folders.</li>
