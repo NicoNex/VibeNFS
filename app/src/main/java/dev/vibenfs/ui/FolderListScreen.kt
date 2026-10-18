@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.preferredFrameRate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -184,7 +185,7 @@ private fun MountedBody(volume: Volume, state: MountState.Mounted, onToggle: () 
             progress = { 1f - free.toFloat() / total },
             color = colors.onPrimary,
             trackColor = colors.primaryContainer,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().preferredFrameRate(DECOR_FPS),
         )
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -278,6 +279,9 @@ private fun MountSwitch(volume: Volume, checked: Boolean, onToggle: () -> Unit, 
     )
 }
 
+// 30 fps is indistinguishable for motion this slow and lets the display drop from 120 Hz (Android 15+).
+private const val DECOR_FPS = 30f
+
 /** Slowly rotating expressive shape used as decoration behind cards and the empty state. */
 @Composable
 fun SpinningShape(color: Color, modifier: Modifier = Modifier, size: Int = 170, shape: androidx.graphics.shapes.RoundedPolygon? = null, periodMs: Int = 40_000) {
@@ -286,7 +290,7 @@ fun SpinningShape(color: Color, modifier: Modifier = Modifier, size: Int = 170, 
         0f, 360f, infiniteRepeatable(tween(periodMs, easing = LinearEasing), RepeatMode.Restart), label = "spin",
     )
     val clip = polygon.toShape()
-    Box(modifier.size(size.dp).graphicsLayer { rotationZ = rotation }.clip(clip).background(color))
+    Box(modifier.size(size.dp).preferredFrameRate(DECOR_FPS).graphicsLayer { rotationZ = rotation }.clip(clip).background(color))
 }
 
 @Composable

@@ -64,14 +64,16 @@ class NfsClient private constructor(private var handle: Long) : Closeable {
                 } else throw e
             }
 
-            fun attemptPath(v: NfsVersion, path: String) = try {
-                attemptWire(v.wire, path)
-            } catch (e: IOException) {
-                // Servers with NFSv4.0 disabled (nfs.conf vers4.0=n, default on some distros) answer
-                // SETCLIENTID with MINOR_VERS_MISMATCH: speak NFSv4.2 with sessions instead.
-                if (v == NfsVersion.V4 && "MINOR_VERS_MISMATCH" in e.message.orEmpty()) {
-                    attemptWire(NFS_V4_2, path).also { Log.i("VibeNFS", "NFSv4.0 refused, using NFSv4.2") }
-                } else throw e
+            fun attemptPath(v: NfsVersion, path: String): NfsClient {
+                if (v != NfsVersion.V4) return attemptWire(v.wire, path)
+                // NFSv4 tries 4.2 (sessions) first; servers without it answer MINOR_VERS_MISMATCH,
+                // so drop to 4.0, which older servers and some userspace ones only speak.
+                return try {
+                    attemptWire(NFS_V4_2, path)
+                } catch (e: IOException) {
+                    if ("MINOR_VERS_MISMATCH" !in e.message.orEmpty()) throw e
+                    attemptWire(v.wire, path).also { Log.i("VibeNFS", "NFSv4.2 refused, using NFSv4.0") }
+                }
             }
 
             fun attempt(v: NfsVersion): NfsClient {
