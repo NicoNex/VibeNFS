@@ -153,7 +153,9 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
         onBack()
     }
 
-    Column(Modifier.fillMaxSize().background(colors.surfaceContainer).systemBarsPadding().imePadding()) {
+    // Surface, not a bare background: it also sets the content color, so text reads in dark theme.
+    Surface(color = colors.surfaceContainer, modifier = Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
     Column(
         Modifier
             .weight(1f)
@@ -330,6 +332,7 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
             // Plain save keeps the current mount state; only the primary action mounts.
             SaveSplitButton(onSaveAndMount = { save(true) }, onSave = { save(existing?.mounted ?: false) })
         }
+    }
     }
 
     if (confirmDelete && existing != null) AlertDialog(

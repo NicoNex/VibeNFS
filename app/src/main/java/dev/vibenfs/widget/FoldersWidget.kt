@@ -43,6 +43,7 @@ import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import dev.vibenfs.R
 import dev.vibenfs.data.Volume
 import dev.vibenfs.mount.MountState
@@ -187,7 +188,7 @@ private fun VolumeRow(context: Context, volume: Volume, state: MountState?) {
                         progress = used,
                         modifier = GlanceModifier.fillMaxWidth().height(4.dp),
                         color = colors.onPrimary,
-                        backgroundColor = colors.primaryContainer,
+                        backgroundColor = ColorProvider(R.color.widget_track),
                     )
                 }
             }

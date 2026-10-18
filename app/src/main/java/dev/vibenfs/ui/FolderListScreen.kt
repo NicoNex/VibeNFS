@@ -189,7 +189,8 @@ private fun MountedBody(volume: Volume, state: MountState.Mounted, onToggle: () 
         LinearWavyProgressIndicator(
             progress = { 1f - free.toFloat() / total },
             color = colors.onPrimary,
-            trackColor = colors.primaryContainer,
+            // A tint of the wave, not primaryContainer: in dark theme that is as dark as the wave itself.
+            trackColor = colors.onPrimary.copy(alpha = 0.3f),
             modifier = Modifier.fillMaxWidth().preferredFrameRate(DECOR_FPS),
         )
     }
