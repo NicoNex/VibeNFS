@@ -65,4 +65,6 @@
     <string name="error_denied">Accesso negato dal server</string>
     <string name="error_no_export">Percorso condiviso non trovato sul server</string>
     <string name="error_refused">Nessuna risposta su quella porta · controlla la porta e che NFS sia attivo</string>
+    <string name="pick_several_exports">Selezionane più di uno per aggiungerli come cartelle separate</string>
+    <string name="error_insecure">Il server rifiuta questo dispositivo · aggiungi \"insecure\" all\'export e consenti l\'indirizzo di questo dispositivo</string>
 </resources>

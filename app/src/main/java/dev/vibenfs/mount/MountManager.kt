@@ -132,6 +132,8 @@ class MountManager(private val context: Context) {
             refreshSpace(id, client)
             client
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.w("VibeNFS", "mount ${volume.host}:${volume.export} (${volume.version}) failed", e)
             setState(id, MountState.Error(e.message ?: context.getString(R.string.connection_error)))
             throw e as? IOException ?: IOException(e)
         }

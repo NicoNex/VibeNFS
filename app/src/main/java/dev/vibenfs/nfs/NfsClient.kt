@@ -1,6 +1,8 @@
 package dev.vibenfs.nfs
 
+import android.util.Log
 import java.io.Closeable
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
@@ -50,14 +52,33 @@ class NfsClient private constructor(private var handle: Long) : Closeable {
          * @param uid/gid AUTH_SYS identity, -1 keeps libnfs' default. Throws IOException on failure.
          */
         fun mount(host: String, export: String, version: NfsVersion, port: Int = 0, uid: Int = -1, gid: Int = -1, timeoutMs: Int = 10_000): NfsClient {
-            fun attempt(v: NfsVersion) = try {
-                NfsClient(nMount(host, export, v.wire, port, true, uid, gid, timeoutMs))
+            fun attemptPath(v: NfsVersion, path: String) = try {
+                NfsClient(nMount(host, path, v.wire, port, true, uid, gid, timeoutMs))
             } catch (e: IOException) {
                 // Servers without MOUNT EXPORT (common for userspace ones) can't do nested-export
                 // traversal; mount them flat instead of failing.
                 if (e.message.orEmpty().contains("Procedure not available")) {
-                    NfsClient(nMount(host, export, v.wire, port, false, uid, gid, timeoutMs))
+                    NfsClient(nMount(host, path, v.wire, port, false, uid, gid, timeoutMs))
                 } else throw e
+            }
+
+            fun attempt(v: NfsVersion): NfsClient {
+                if (v != NfsVersion.V4) return attemptPath(v, export)
+                // NFSv4 paths are relative to the server's pseudo-root: with Linux's fsid=0 export at
+                // /srv/nfs4, the v3 path /srv/nfs4/HDD is /HDD over v4. Strip leading components until
+                // the server finds it; any error other than "not found" ends the search.
+                var first: IOException? = null
+                for (path in v4Candidates(export)) {
+                    try {
+                        return attemptPath(v, path).also {
+                            if (path != export) Log.i("VibeNFS", "NFSv4 serves $export as $path")
+                        }
+                    } catch (e: IOException) {
+                        if (first == null) first = e
+                        if (e !is FileNotFoundException && !e.message.orEmpty().contains(Regex("NOENT|No such file", RegexOption.IGNORE_CASE))) throw e
+                    }
+                }
+                throw first!!
             }
             if (version != NfsVersion.AUTO) return attempt(version)
             // AUTO prefers v4 (single port, firewall friendly) and falls back to v3,
@@ -91,4 +112,10 @@ class NfsClient private constructor(private var handle: Long) : Closeable {
         @JvmStatic private external fun nDelete(ctx: Long, path: String, isDir: Boolean)
         @JvmStatic private external fun nRename(ctx: Long, from: String, to: String)
     }
+}
+
+/** NFSv4 paths to try for a v3-style export: "/srv/nfs4/HDD" -> "/srv/nfs4/HDD", "/nfs4/HDD", "/HDD". */
+internal fun v4Candidates(export: String): List<String> {
+    val parts = export.trim('/').split('/').filter { it.isNotEmpty() }
+    return parts.indices.map { "/" + parts.drop(it).joinToString("/") }.ifEmpty { listOf("/") }
 }

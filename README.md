@@ -38,7 +38,8 @@ Your media server, home lab or Linux box already shares folders over NFS. Your A
 - **Quick Settings tile.** Tap to mount or unmount everything. Long-press for a per-folder panel, like the Wi-Fi and Bluetooth tiles.
 - **Home screen widget.** The same controls on your home screen, with live status.
 - **Finds shares for you.** Type the address of an NFSv3 server and VibeNFS lists its exported paths; tap one to fill in the field. NFSv4-only servers don't publish that list, so type the path yourself.
-- **Multiple servers.** Add as many network folders as you want, each with its own protocol, port and UID/GID.
+- **Multiple servers and exports.** Add as many network folders as you want, each with its own protocol, port and UID/GID. Tick several exports of one server to add them all at once.
+- **NFSv4 pseudo-root aware.** Use the path the server lists (`/srv/nfs4/media`) even when NFSv4 serves it as `/media`: if NFSv4 can't find the full path, VibeNFS tries the shorter ones.
 - **Clear errors.** "Server unreachable" or "Access denied by the server" instead of raw RPC codes.
 - **Material 3 Expressive.** Big editorial type and expressive shapes and motion. All colors come from your wallpaper (Material You), in light and dark.
 - **English and Italian.**
@@ -134,6 +135,9 @@ NFSv3 and NFSv4.0. Kerberos (`sec=krb5`) isn't supported yet.
 
 **Does it keep a connection open in the background?**
 No background service or persistent notification. Mounting connects right away. If the app is closed or the network drops, the connection reopens on the next use.
+
+**"Server refused this device", "RPC Packet not accepted" or `MNT3ERR_ACCES`?**
+The server rejects clients on non-privileged ports, and every Android app is one. Add `insecure` to each export, including the NFSv4 root (`fsid=0`), and make sure the client list includes your phone's address. On a VPN such as Tailscale or NetBird that's usually `100.64.0.0/10`. Then run `sudo exportfs -ra`. Listing exports still works without this, which is why the shares can show up while mounting fails.
 
 **Is it tested on real NAS hardware?**
 Not yet. So far VibeNFS has been tested with NFSv3 against a userspace server on the Android 17 emulator. NFSv4 and real NAS boxes (Synology, TrueNAS, Unraid, Linux `nfsd`) still need testing. Reports are very welcome.

@@ -2,6 +2,7 @@
 
 package dev.vibenfs.ui
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -103,6 +104,8 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
     var showErrors by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var exports by remember { mutableStateOf(emptyList<String>()) }
+    // When adding, more exports of the same server can be ticked: each becomes its own folder.
+    var extra by rememberSaveable { mutableStateOf(listOf<String>()) }
     var test by remember { mutableStateOf<TestResult?>(null) }
 
     // Ask the server what it shares once the user stops typing the address.
@@ -113,14 +116,15 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
         exports = withContext(Dispatchers.IO) { runCatching { NfsClient.exports(host.trim(), port.toIntOrNull() ?: 0) }.getOrDefault(emptyList()) }
     }
 
-    fun build(mounted: Boolean): Volume? {
+
+    fun build(mounted: Boolean, path: String = export, label: String = name.ifBlank { host }): Volume? {
         showErrors = true
-        if (host.isBlank() || export.isBlank()) return null
+        if (host.isBlank() || path.isBlank()) return null
         val base = existing ?: Volume(name = "", host = "", export = "")
         return base.copy(
-            name = name.ifBlank { host }.trim(),
+            name = label.trim(),
             host = host.trim(),
-            export = export.trim(),
+            export = path.trim(),
             version = version,
             port = port.toIntOrNull() ?: 0,
             uid = uid.toIntOrNull() ?: -1,
@@ -130,8 +134,12 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
         )
     }
 
-    fun save(mounted: Boolean) = build(mounted)?.let {
-        mounts.saveInBackground(it)
+    fun save(mounted: Boolean) {
+        val paths = (listOf(export) + extra).filter { it.isNotBlank() }.distinct()
+        val volumes = if (paths.size <= 1) listOfNotNull(build(mounted, paths.firstOrNull() ?: export))
+        else paths.mapNotNull { build(mounted, it, folderLabel(it, paths, name)) }
+        if (volumes.isEmpty()) return
+        volumes.forEach { mounts.saveInBackground(it) }
         onBack()
     }
 
@@ -182,7 +190,7 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
 
         val required = stringResource(R.string.error_required)
         BigField(
-            stringResource(R.string.field_host), host, { host = it },
+            stringResource(R.string.field_host), host, { host = it; extra = emptyList() }, // ticks belong to the old server
             placeholder = stringResource(R.string.field_host_hint),
             keyboardType = KeyboardType.Uri,
             error = required.takeIf { showErrors && host.isBlank() },
@@ -196,16 +204,31 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
         )
         if (exports.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row {
-                Text(stringResource(R.string.discovered_exports), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.discovered_exports), style = MaterialTheme.typography.titleSmall)
+                    if (existing == null) Text(
+                        stringResource(R.string.pick_several_exports),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant,
+                    )
+                }
                 MonoLabel("${exports.size} · $host", size = 11)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 exports.forEach { path ->
                     FilterChip(
-                        selected = export == path,
-                        onClick = { export = path },
+                        selected = export == path || path in extra,
+                        onClick = {
+                            when {
+                                existing != null -> export = path // editing one folder: just switch path
+                                export == path -> { export = extra.firstOrNull().orEmpty(); extra = extra.drop(1) }
+                                path in extra -> extra = extra - path
+                                export.isBlank() -> export = path
+                                else -> extra = extra + path
+                            }
+                        },
                         label = { MonoLabel(path, color = MaterialTheme.colorScheme.onSurface, size = 14, uppercase = false) },
-                        leadingIcon = if (export == path) ({ Icon(Icons.Rounded.Check, null, Modifier.size(18.dp)) }) else null,
+                        leadingIcon = if (export == path || path in extra) ({ Icon(Icons.Rounded.Check, null, Modifier.size(18.dp)) }) else null,
                         shape = RoundedCornerShape(20.dp),
                     )
                 }
@@ -247,7 +270,7 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
         AnimatedVisibility(advanced) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BigField(
-                    stringResource(R.string.field_port), port, { port = it.filter(Char::isDigit).take(5).takeIf { p -> (p.toIntOrNull() ?: 0) <= 65535 } ?: port },
+                    stringResource(R.string.field_port), port, { extra = emptyList(); port = it.filter(Char::isDigit).take(5).takeIf { p -> (p.toIntOrNull() ?: 0) <= 65535 } ?: port },
                     placeholder = stringResource(R.string.field_port_hint), keyboardType = KeyboardType.Number,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -279,7 +302,10 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
                 scope.launch {
                     test = withContext(Dispatchers.IO) {
                         runCatching { NfsClient.mount(v.host, v.export, v.version, v.port, v.uid, v.gid).use { runCatching { it.space().second }.getOrNull() } }
-                            .fold({ TestResult.Ok(it) }, { TestResult.Failed(it.message ?: "") })
+                            .fold({ TestResult.Ok(it) }, {
+                                Log.w("VibeNFS", "test ${v.host}:${v.export} (${v.version}) failed", it)
+                                TestResult.Failed(it.message ?: "")
+                            })
                     }
                 }
             }) { Text(stringResource(R.string.test_connection)) }
@@ -325,7 +351,7 @@ private fun TestCard(result: TestResult) {
                     },
                     style = MaterialTheme.typography.titleSmall,
                 )
-                if (result is TestResult.Failed) MonoLabel(friendlyError(result.message), color = content, size = 11)
+                if (result is TestResult.Failed) ErrorText(result.message, content, size = 11)
             }
         }
     }
@@ -355,4 +381,16 @@ private fun SaveSplitButton(onSaveAndMount: () -> Unit, onSave: () -> Unit) {
             }
         },
     )
+}
+
+/**
+ * Name for one of several exports added together: its last path segment ("/srv/nfs4/HDD" -> "HDD"),
+ * with the parent when two picks share it, and the typed name in front when there is one.
+ */
+internal fun folderLabel(path: String, all: List<String>, typed: String): String {
+    fun segs(p: String) = p.trim('/').split('/').filter { it.isNotEmpty() }
+    val mine = segs(path)
+    val clash = all.count { segs(it).lastOrNull() == mine.lastOrNull() } > 1
+    val base = (if (clash) mine.takeLast(2) else mine.takeLast(1)).joinToString("/").ifEmpty { "/" }
+    return if (typed.isBlank()) base else "${typed.trim()} $base"
 }

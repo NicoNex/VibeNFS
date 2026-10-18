@@ -133,11 +133,24 @@ fun PosterTitle(text: String, modifier: Modifier = Modifier, size: Int = 104, co
     )
 }
 
+/** Readable error plus, when it was translated, the server's own words underneath for diagnosis. */
+@Composable
+fun ErrorText(raw: String, color: Color, size: Int = 12) {
+    val friendly = friendlyError(raw)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        MonoLabel(friendly, color = color, size = size)
+        if (friendly != raw) MonoLabel(raw, color = color.copy(alpha = 0.7f), size = 10, uppercase = false)
+    }
+}
+
 /** Turns libnfs/RPC error text into something a person can act on; unknown errors pass through. */
 @Composable
 fun friendlyError(raw: String): String {
     val m = raw.lowercase()
     return when {
+        // Linux nfsd answers a client on a non-privileged port (all Android apps) this way unless the
+        // export has "insecure": v4 rejects the RPC, v3's MOUNT says ACCES.
+        "not accepted" in m || "mnt3err_acces" in m -> stringResource(R.string.error_insecure)
         "refused" in m -> stringResource(R.string.error_refused)
         "no route" in m || "unreachable" in m -> stringResource(R.string.error_unreachable)
         "timed out" in m || "timeout" in m -> stringResource(R.string.error_timeout)
