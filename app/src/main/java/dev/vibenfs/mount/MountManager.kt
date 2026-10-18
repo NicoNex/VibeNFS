@@ -1,6 +1,8 @@
 package dev.vibenfs.mount
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import android.util.Log
 import android.provider.DocumentsContract
 import dev.vibenfs.R
@@ -13,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -68,6 +71,19 @@ class MountManager(private val context: Context) {
             combine(volumes.filterNotNull(), states) { _, _ -> }.debounce(250)
                 .collect { runCatching { FoldersWidget.refresh(context) } } // one failed update must not stop the rest
         }
+        // A new default network (Wi-Fi <-> mobile) strands TCP sessions on the old one. libnfs only
+        // notices after RPC timeouts, so move every mounted folder over right away. The first
+        // callback is the network we start on: nothing to move yet.
+        context.getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(
+            object : ConnectivityManager.NetworkCallback() {
+                private var current: Network? = null
+                override fun onAvailable(network: Network) {
+                    val previous = current
+                    current = network
+                    if (previous != null && previous != network) scope.launch { reconnectAll() }
+                }
+            },
+        )
         // Restore connections the user left mounted before the process died.
         scope.launch {
             store.data.first().filter { it.mounted }.forEach { launch { runCatching { connect(it.id) }; notifyChanged() } }
@@ -139,6 +155,25 @@ class MountManager(private val context: Context) {
         }
     }
 
+    /**
+     * Fresh connections for every mounted folder, including ones in error that the new network may
+     * now reach. Old clients close afterwards, off the lock: close() waits out their in-flight calls,
+     * which fail within the RPC timeout, so nothing blocks for good.
+     */
+    private suspend fun reconnectAll() = coroutineScope {
+        store.data.first().filter { it.mounted }.forEach { volume ->
+            launch {
+                val old = lock(volume.id).withLock { clients.remove(volume.id) }
+                // Routes on a network that just came up can lag its callback: retry briefly.
+                for (wait in RETRY_MS) {
+                    delay(wait)
+                    if (runCatching { connect(volume.id) }.isSuccess) break
+                }
+                old?.let { withContext(Dispatchers.IO) { it.close() } }
+            }
+        }
+    }
+
     private suspend fun disconnect(id: String) = lock(id).withLock {
         clients.remove(id)?.let { withContext(Dispatchers.IO) { it.close() } }
         setState(id, MountState.Off)
@@ -157,5 +192,6 @@ class MountManager(private val context: Context) {
 
     companion object {
         const val AUTHORITY = "dev.vibenfs.documents"
+        private val RETRY_MS = longArrayOf(0, 2_000, 5_000)
     }
 }

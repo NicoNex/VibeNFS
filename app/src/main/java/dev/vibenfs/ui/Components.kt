@@ -145,18 +145,21 @@ fun ErrorText(raw: String, color: Color, size: Int = 12) {
 
 /** Turns libnfs/RPC error text into something a person can act on; unknown errors pass through. */
 @Composable
-fun friendlyError(raw: String): String {
+fun friendlyError(raw: String): String = friendlyErrorRes(raw)?.let { stringResource(it) } ?: raw
+
+/** String that explains [raw], or null when the raw text is all we have. Compose-free, for the widget too. */
+fun friendlyErrorRes(raw: String): Int? {
     val m = raw.lowercase()
     return when {
         // Linux nfsd answers a client on a non-privileged port (all Android apps) this way unless the
         // export has "insecure": v4 rejects the RPC, v3's MOUNT says ACCES.
-        "not accepted" in m || "mnt3err_acces" in m -> stringResource(R.string.error_insecure)
-        "refused" in m -> stringResource(R.string.error_refused)
-        "no route" in m || "unreachable" in m -> stringResource(R.string.error_unreachable)
-        "timed out" in m || "timeout" in m -> stringResource(R.string.error_timeout)
-        "permission" in m || "access" in m -> stringResource(R.string.error_denied)
-        "no such" in m || "noent" in m || "not found" in m -> stringResource(R.string.error_no_export)
-        else -> raw
+        "not accepted" in m || "mnt3err_acces" in m -> R.string.error_insecure
+        "refused" in m -> R.string.error_refused
+        "no route" in m || "unreachable" in m -> R.string.error_unreachable
+        "timed out" in m || "timeout" in m -> R.string.error_timeout
+        "permission" in m || "access" in m -> R.string.error_denied
+        "no such" in m || "noent" in m || "not found" in m -> R.string.error_no_export
+        else -> null
     }
 }
 

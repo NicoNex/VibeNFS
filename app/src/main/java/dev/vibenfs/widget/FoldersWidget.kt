@@ -1,6 +1,7 @@
 package dev.vibenfs.widget
 
 import android.content.Context
+import android.text.format.Formatter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,6 +18,7 @@ import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
@@ -45,6 +47,7 @@ import dev.vibenfs.R
 import dev.vibenfs.data.Volume
 import dev.vibenfs.mount.MountState
 import dev.vibenfs.mounts
+import dev.vibenfs.ui.friendlyErrorRes
 
 /** Home screen twin of the Quick Settings tile: mount everything at once, or one folder at a time. */
 class FoldersWidget : GlanceAppWidget() {
@@ -129,17 +132,26 @@ private fun Content(context: Context, volumes: List<Volume>, states: Map<String,
     }
 }
 
+private fun size(context: Context, bytes: Long) = Formatter.formatShortFileSize(context, bytes)
+
 /** The whole row is the toggle: it lights up in the primary colors while the folder is mounted. */
 @Composable
 private fun VolumeRow(context: Context, volume: Volume, state: MountState?) {
     val colors = GlanceTheme.colors
     val error = state is MountState.Error
     val lit = volume.mounted && !error
+    // The lit row already says "mounted": spend the second line on what's useful instead.
     val subtitle = when (state) {
-        is MountState.Error -> context.getString(R.string.state_error)
+        is MountState.Error -> friendlyErrorRes(state.message)?.let(context::getString) ?: state.message
+        is MountState.Mounted -> state.freeBytes?.let { free ->
+            state.totalBytes?.let { context.getString(R.string.free_of_total, size(context, free), size(context, it)) }
+                ?: context.getString(R.string.free_short, size(context, free))
+        } ?: volume.host
         MountState.Connecting -> context.getString(R.string.state_connecting) + "…"
-        is MountState.Mounted -> context.getString(R.string.state_mounted)
-        else -> if (volume.mounted) context.getString(R.string.state_connecting) + "…" else context.getString(R.string.state_off)
+        else -> if (volume.mounted) context.getString(R.string.state_connecting) + "…" else volume.host
+    }
+    val used = (state as? MountState.Mounted)?.let { m ->
+        if (m.totalBytes != null && m.freeBytes != null && m.totalBytes > 0) 1f - m.freeBytes.toFloat() / m.totalBytes else null
     }
     val (container, title, body) = when {
         error -> Triple(colors.errorContainer, colors.onErrorContainer, colors.onErrorContainer)
@@ -168,7 +180,16 @@ private fun VolumeRow(context: Context, volume: Volume, state: MountState?) {
             Spacer(GlanceModifier.width(10.dp))
             Column(GlanceModifier.defaultWeight()) {
                 Text(volume.name, maxLines = 1, style = TextStyle(color = title, fontSize = 15.sp, fontWeight = FontWeight.Medium))
-                Text(subtitle.uppercase(), style = TextStyle(color = body, fontSize = 11.sp, fontFamily = FontFamily.Monospace))
+                Text(subtitle, maxLines = 1, style = TextStyle(color = body, fontSize = 11.sp, fontFamily = FontFamily.Monospace))
+                if (used != null) {
+                    Spacer(GlanceModifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = used,
+                        modifier = GlanceModifier.fillMaxWidth().height(4.dp),
+                        color = colors.onPrimary,
+                        backgroundColor = colors.primaryContainer,
+                    )
+                }
             }
         }
     }

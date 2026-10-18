@@ -119,7 +119,7 @@ fun FolderListScreen(onAdd: () -> Unit, onEdit: (String) -> Unit) {
         }
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 16.dp, bottom = 120.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 16.dp, bottom = padding.calculateBottomPadding() + 120.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize().widthIn(max = 840.dp),
         ) {
@@ -135,7 +135,11 @@ fun FolderListScreen(onAdd: () -> Unit, onEdit: (String) -> Unit) {
 @Composable
 private fun Header(volumes: List<Volume>, states: Map<String, MountState>) {
     val mounted = states.values.filterIsInstance<MountState.Mounted>()
-    val free = mounted.mapNotNull { it.freeBytes }.takeIf { it.isNotEmpty() }?.sum()
+    // Exports of one disk report the same numbers: count each disk once. Saturating, since some
+    // servers report near Long.MAX_VALUE and a plain sum wraps negative.
+    val free = mounted.filter { it.freeBytes != null }.distinctBy { it.totalBytes to it.freeBytes }
+        .map { it.freeBytes!! }.takeIf { it.isNotEmpty() }
+        ?.fold(0L) { sum, b -> if (sum > Long.MAX_VALUE - b) Long.MAX_VALUE else sum + b }
     Column(Modifier.padding(bottom = 8.dp)) {
         MonoLabel("VibeNFS", size = 13)
         PosterTitle(stringResource(R.string.folders_poster))
