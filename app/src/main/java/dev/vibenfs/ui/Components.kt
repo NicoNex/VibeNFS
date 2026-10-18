@@ -133,6 +133,20 @@ fun PosterTitle(text: String, modifier: Modifier = Modifier, size: Int = 104, co
     )
 }
 
+/** Turns libnfs/RPC error text into something a person can act on; unknown errors pass through. */
+@Composable
+fun friendlyError(raw: String): String {
+    val m = raw.lowercase()
+    return when {
+        "refused" in m -> stringResource(R.string.error_refused)
+        "no route" in m || "unreachable" in m -> stringResource(R.string.error_unreachable)
+        "timed out" in m || "timeout" in m -> stringResource(R.string.error_timeout)
+        "permission" in m || "access" in m -> stringResource(R.string.error_denied)
+        "no such" in m || "noent" in m || "not found" in m -> stringResource(R.string.error_no_export)
+        else -> raw
+    }
+}
+
 @Composable
 fun NfsVersion.label() = when (this) {
     NfsVersion.AUTO -> stringResource(R.string.version_auto)

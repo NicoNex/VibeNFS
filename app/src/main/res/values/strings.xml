@@ -66,4 +66,9 @@
     <string name="more_save_options">More save options</string>
     <string name="open_app">Open VibeNFS</string>
     <string name="mounted_ratio">%1$d / %2$d on</string>
+    <string name="error_unreachable">Server unreachable · check address and network</string>
+    <string name="error_timeout">Server not responding</string>
+    <string name="error_denied">Access denied by the server</string>
+    <string name="error_no_export">Shared path not found on the server</string>
+    <string name="error_refused">Nothing answers on that port · check the port and that NFS is running</string>
 </resources>

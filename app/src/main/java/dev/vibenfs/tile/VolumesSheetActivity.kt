@@ -46,6 +46,7 @@ import dev.vibenfs.mount.MountState
 import dev.vibenfs.mounts
 import dev.vibenfs.ui.FolderBadge
 import dev.vibenfs.ui.MonoLabel
+import dev.vibenfs.ui.friendlyError
 import dev.vibenfs.ui.PosterTitle
 import dev.vibenfs.ui.StatusPill
 import dev.vibenfs.ui.theme.VibeTheme
@@ -122,7 +123,7 @@ private fun SheetRow(volume: Volume, state: MountState, onMount: (Boolean) -> Un
             }
             Column(Modifier.weight(1f)) {
                 Text(volume.name, style = MaterialTheme.typography.titleMedium)
-                MonoLabel(if (state is MountState.Error) state.message else volume.host, color = content, size = 11)
+                MonoLabel(if (state is MountState.Error) friendlyError(state.message) else volume.host, color = content, size = 11)
             }
             if (state is MountState.Error) Button(
                 onClick = { onMount(true) },

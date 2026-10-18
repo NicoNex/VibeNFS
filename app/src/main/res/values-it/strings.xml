@@ -60,4 +60,9 @@
     <string name="more_save_options">Altre opzioni di salvataggio</string>
     <string name="open_app">Apri VibeNFS</string>
     <string name="mounted_ratio">%1$d / %2$d attive</string>
+    <string name="error_unreachable">Server irraggiungibile · controlla indirizzo e rete</string>
+    <string name="error_timeout">Il server non risponde</string>
+    <string name="error_denied">Accesso negato dal server</string>
+    <string name="error_no_export">Percorso condiviso non trovato sul server</string>
+    <string name="error_refused">Nessuna risposta su quella porta · controlla la porta e che NFS sia attivo</string>
 </resources>

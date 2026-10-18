@@ -1,3 +1,11 @@
+import java.io.File
+import java.util.Properties
+
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -12,8 +20,8 @@ android {
         applicationId = "dev.vibenfs"
         minSdk = 34
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = providers.gradleProperty("VERSION_CODE").get().toInt()
+        versionName = providers.gradleProperty("VERSION_NAME").get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // ponytail: real devices + emulator only; add armeabi-v7a if 32-bit phones matter
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
@@ -26,11 +34,29 @@ android {
         }
     }
 
+    signingConfigs {
+        if (keystoreProps.isNotEmpty()) {
+            create("upload") {
+                // ponytail: expand leading ~ ourselves - Gradle's file() treats it as a literal dir name
+                fun prop(key: String) = requireNotNull(keystoreProps.getProperty(key)) { "keystore.properties: $key missing" }
+                storeFile = prop("storeFile").let { p ->
+                    if (p.startsWith("~/")) File(System.getProperty("user.home"), p.drop(2)) else rootProject.file(p)
+                }
+                storePassword = prop("storePassword")
+                keyAlias = prop("keyAlias")
+                keyPassword = prop("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Upload key when keystore.properties is present (required for Play), else
+            // debug-signed so CI and sideload builds keep working.
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
     buildFeatures { compose = true }

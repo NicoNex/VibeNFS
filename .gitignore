@@ -7,3 +7,8 @@ local.properties
 .cxx/
 .DS_Store
 captures/
+/keystore.properties
+*.apk
+*.aab
+*.jks
+*.keystore

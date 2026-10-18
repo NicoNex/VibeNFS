@@ -224,7 +224,7 @@ private fun ConnectingBody(volume: Volume, onCancel: () -> Unit) {
 private fun ErrorBody(volume: Volume, state: MountState.Error, onMount: (Boolean) -> Unit) {
     val colors = MaterialTheme.colorScheme
     Poster(volume.name, colors.onErrorContainer, maxSize = 48)
-    MonoLabel(state.message, color = colors.onErrorContainer)
+    MonoLabel(friendlyError(state.message), color = colors.onErrorContainer)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = { onMount(true) }, colors = ButtonDefaults.buttonColors(colors.error, colors.onError)) { Text(stringResource(R.string.retry)) }
         TextButton(onClick = { onMount(false) }, colors = ButtonDefaults.textButtonColors(contentColor = colors.onErrorContainer)) {

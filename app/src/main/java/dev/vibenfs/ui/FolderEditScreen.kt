@@ -325,7 +325,7 @@ private fun TestCard(result: TestResult) {
                     },
                     style = MaterialTheme.typography.titleSmall,
                 )
-                if (result is TestResult.Failed) MonoLabel(result.message, color = content, size = 11)
+                if (result is TestResult.Failed) MonoLabel(friendlyError(result.message), color = content, size = 11)
             }
         }
     }
