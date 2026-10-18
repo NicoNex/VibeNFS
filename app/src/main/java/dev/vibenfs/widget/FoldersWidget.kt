@@ -14,12 +14,10 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.Switch
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
@@ -29,6 +27,7 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
@@ -42,8 +41,6 @@ import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
-import dev.vibenfs.MainActivity
 import dev.vibenfs.R
 import dev.vibenfs.data.Volume
 import dev.vibenfs.mount.MountState
@@ -132,34 +129,47 @@ private fun Content(context: Context, volumes: List<Volume>, states: Map<String,
     }
 }
 
+/** The whole row is the toggle: it lights up in the primary colors while the folder is mounted. */
 @Composable
 private fun VolumeRow(context: Context, volume: Volume, state: MountState?) {
     val colors = GlanceTheme.colors
     val error = state is MountState.Error
+    val lit = volume.mounted && !error
     val subtitle = when (state) {
         is MountState.Error -> context.getString(R.string.state_error)
         MountState.Connecting -> context.getString(R.string.state_connecting) + "…"
         is MountState.Mounted -> context.getString(R.string.state_mounted)
         else -> if (volume.mounted) context.getString(R.string.state_connecting) + "…" else context.getString(R.string.state_off)
     }
+    val (container, title, body) = when {
+        error -> Triple(colors.errorContainer, colors.onErrorContainer, colors.onErrorContainer)
+        lit -> Triple(colors.primary, colors.onPrimary, colors.onPrimary)
+        else -> Triple(colors.surfaceVariant, colors.onSurface, colors.onSurfaceVariant)
+    }
     Column(GlanceModifier.padding(vertical = 3.dp)) {
         Row(
             GlanceModifier.fillMaxWidth()
-                .background(if (error) colors.errorContainer else colors.surfaceVariant)
+                .background(container)
                 .cornerRadius(20.dp)
-                .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
-                .clickable(actionStartActivity<MainActivity>()),
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .clickable(actionRunCallback<MountAction>(actionParametersOf(VolumeId to volume.id))),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val onColor: ColorProvider = if (error) colors.onErrorContainer else colors.onSurfaceVariant
-            Column(GlanceModifier.defaultWeight()) {
-                Text(volume.name, maxLines = 1, style = TextStyle(color = if (error) colors.onErrorContainer else colors.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Medium))
-                Text(subtitle.uppercase(), style = TextStyle(color = onColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace))
+            // Icon chip: filled when on, outline-quiet when off, so state reads at a glance.
+            Box(
+                GlanceModifier.size(36.dp).cornerRadius(18.dp).background(if (lit) colors.onPrimary else colors.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    ImageProvider(R.drawable.ic_tile_nfs), null, GlanceModifier.size(20.dp),
+                    colorFilter = androidx.glance.ColorFilter.tint(if (lit) colors.primary else body),
+                )
             }
-            Switch(
-                checked = volume.mounted,
-                onCheckedChange = actionRunCallback<MountAction>(actionParametersOf(VolumeId to volume.id)),
-            )
+            Spacer(GlanceModifier.width(10.dp))
+            Column(GlanceModifier.defaultWeight()) {
+                Text(volume.name, maxLines = 1, style = TextStyle(color = title, fontSize = 15.sp, fontWeight = FontWeight.Medium))
+                Text(subtitle.uppercase(), style = TextStyle(color = body, fontSize = 11.sp, fontFamily = FontFamily.Monospace))
+            }
         }
     }
 }
