@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/icon.svg" width="128" alt="VibeNFS app icon: a folder with a network signal on a lavender cookie shape"></p>
+
 <h1 align="center">VibeNFS</h1>
 
 <p align="center">
