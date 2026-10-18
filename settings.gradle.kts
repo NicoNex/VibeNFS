@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "VibeNFS"
-include(":app")
+include(":app", ":baselineprofile")

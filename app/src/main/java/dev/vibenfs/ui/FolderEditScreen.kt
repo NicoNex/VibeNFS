@@ -69,6 +69,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -272,18 +273,26 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
         SwitchRow(stringResource(R.string.field_read_only), stringResource(R.string.read_only_body), readOnly) { readOnly = it }
         SwitchRow(stringResource(R.string.field_thumbnails), stringResource(R.string.thumbnails_body), thumbnails) { thumbnails = it }
 
+        // One column item for button and section: the parent's spacing would otherwise appear and
+        // vanish in a single frame around the animated section, a jump at the end of every close.
+        Column {
         TextButton(onClick = { advanced = !advanced; revealAdvanced = advanced }) {
             Text(stringResource(R.string.advanced))
             Icon(if (advanced) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null)
         }
-        AnimatedVisibility(advanced, Modifier.bringIntoViewRequester(advancedView)) {
-            // The section opens below the fold, often unnoticed: scroll it into view once it has grown.
+        AnimatedVisibility(
+            advanced,
+            Modifier.bringIntoViewRequester(advancedView).onSizeChanged {
+                // The section opens below the fold: follow it as it grows, frame by frame, instead of
+                // scrolling once it's done. Overlapping requests retarget one smooth scroll.
+                if (revealAdvanced) scope.launch { advancedView.bringIntoView() }
+            },
+        ) {
             if (revealAdvanced) LaunchedEffect(Unit) {
                 snapshotFlow { transition.currentState }.first { it == EnterExitState.Visible }
-                advancedView.bringIntoView()
                 revealAdvanced = false
             }
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BigField(
                     stringResource(R.string.field_port), port, { extra = emptyList(); port = it.filter(Char::isDigit).take(5).takeIf { p -> (p.toIntOrNull() ?: 0) <= 65535 } ?: port },
                     placeholder = stringResource(R.string.field_port_hint), keyboardType = KeyboardType.Number,
@@ -301,6 +310,7 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
                     )
                 }
             }
+        }
         }
 
         test?.let { TestCard(it) }
