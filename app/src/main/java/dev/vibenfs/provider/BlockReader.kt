@@ -26,6 +26,7 @@ class BlockReader(private val nfs: NfsClient, private val fh: Long, var size: Lo
     }
     private val issued = ArrayList<Future<ByteArray>>()
     private var lastBlock = -2L
+    private var ahead = 0
 
     /** Reads up to [len] bytes at [pos] into [dst]; 0 at or past the end of the file. */
     fun read(pos: Long, dst: ByteArray, off: Int, len: Int): Int {
@@ -33,7 +34,12 @@ class BlockReader(private val nfs: NfsClient, private val fh: Long, var size: Lo
         while (done < len && pos + done < size) {
             val at = pos + done
             val index = at / BLOCK
-            if (index == lastBlock + 1) for (ahead in index + 1..index + AHEAD) fetch(index = ahead, prefetch = true)
+            // Adaptive window, like kernel readahead: start with nothing in flight (a thumbnail
+            // wants one header block), double on each sequential step, reset on a seek.
+            if (index != lastBlock) {
+                ahead = if (index == lastBlock + 1) (ahead * 2).coerceIn(1, MAX_AHEAD) else 0
+                for (next in index + 1..index + ahead) fetch(next, prefetch = true)
+            }
             lastBlock = index
             val block = try {
                 fetch(index, prefetch = false)!!.get()
@@ -105,10 +111,10 @@ class BlockReader(private val nfs: NfsClient, private val fh: Long, var size: Lo
     private fun settle() = issued.forEach { runCatching { it.get() } }
 
     companion object {
-        const val BLOCK = 512 * 1024
-        private const val AHEAD = 3 // blocks in flight ahead of a sequential reader
-        private const val BLOCKS = 6 // cache per open file: 3 MiB at most
+        const val BLOCK = 128 * 1024
+        private const val MAX_AHEAD = 16 // 2 MiB in flight for a streaming reader
+        private const val BLOCKS = MAX_AHEAD + 4 // cache per open file: 2.5 MiB at most
         // Shared by all open files; idle threads exit, so a quiet provider holds none.
-        private val POOL = ThreadPoolExecutor(0, 8, 30, TimeUnit.SECONDS, SynchronousQueue()) { Thread(it, "nfs-read").apply { isDaemon = true } }
+        private val POOL = ThreadPoolExecutor(0, MAX_AHEAD, 30, TimeUnit.SECONDS, SynchronousQueue()) { Thread(it, "nfs-read").apply { isDaemon = true } }
     }
 }

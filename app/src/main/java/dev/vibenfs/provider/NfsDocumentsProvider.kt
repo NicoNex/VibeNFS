@@ -18,6 +18,7 @@ import android.system.ErrnoException
 import android.system.OsConstants
 import android.webkit.MimeTypeMap
 import dev.vibenfs.R
+import dev.vibenfs.data.Volume
 import dev.vibenfs.mount.MountManager
 import dev.vibenfs.mount.MountManager.Companion.AUTHORITY
 import dev.vibenfs.mount.MountState
@@ -54,15 +55,16 @@ class NfsDocumentsProvider : DocumentsProvider() {
 
     override fun queryDocument(documentId: String, projection: Array<String>?): Cursor = io {
         val doc = DocId.parse(documentId)
+        if (volume(doc)?.thumbnails == false) throw FileNotFoundException("Thumbnails are off for this folder")
         val entry = client(doc).stat(doc.path).copy(name = doc.name)
-        MatrixCursor(projection ?: DOC_COLUMNS).also { it.addEntry(doc, entry, writable(doc)) }
+        MatrixCursor(projection ?: DOC_COLUMNS).also { it.addEntry(doc, entry, volume(doc)) }
     }
 
     override fun queryChildDocuments(parentId: String, projection: Array<String>?, sortOrder: String?): Cursor = io {
         val parent = DocId.parse(parentId)
         MatrixCursor(projection ?: DOC_COLUMNS).apply {
-            val writable = writable(parent)
-            client(parent).list(parent.path).forEach { addEntry(parent.child(it.name), it, writable) }
+            val volume = volume(parent)
+            client(parent).list(parent.path).forEach { addEntry(parent.child(it.name), it, volume) }
             setNotificationUri(context!!.contentResolver, DocumentsContract.buildChildDocumentsUri(AUTHORITY, parentId))
         }
     }
@@ -153,6 +155,7 @@ class NfsDocumentsProvider : DocumentsProvider() {
 
     override fun openDocumentThumbnail(documentId: String, sizeHint: Point, signal: CancellationSignal?): AssetFileDescriptor = io {
         val doc = DocId.parse(documentId)
+        if (volume(doc)?.thumbnails == false) throw FileNotFoundException("Thumbnails are off for this folder")
         val entry = client(doc).stat(doc.path)
         // Keyed by content identity, so an edited file gets a fresh thumbnail.
         val key = "$documentId|${entry.size}|${entry.lastModified}|${sizeHint.x}"
@@ -175,7 +178,8 @@ class NfsDocumentsProvider : DocumentsProvider() {
     private fun notifyChildren(parent: DocId) =
         context!!.contentResolver.notifyChange(DocumentsContract.buildChildDocumentsUri(AUTHORITY, parent.toString()), null)
 
-    private fun writable(doc: DocId) = mounts.volumesNow().firstOrNull { it.id == doc.volume }?.readOnly == false
+    private fun volume(doc: DocId) = mounts.volumesNow().firstOrNull { it.id == doc.volume }
+    private fun writable(doc: DocId) = volume(doc)?.readOnly == false
 
     private fun requireWritable(doc: DocId) {
         if (!writable(doc)) throw FileNotFoundException("Volume is read only")
@@ -196,9 +200,10 @@ class NfsDocumentsProvider : DocumentsProvider() {
         if (exists) throw FileNotFoundException("${doc.name} already exists")
     }
 
-    private fun MatrixCursor.addEntry(doc: DocId, entry: NfsEntry, writable: Boolean) {
+    private fun MatrixCursor.addEntry(doc: DocId, entry: NfsEntry, volume: Volume?) {
+        val writable = volume?.readOnly == false
         val mime = if (entry.isDirectory) Document.MIME_TYPE_DIR else mimeOf(entry.name)
-        val thumb = if (Thumbnails.supports(mime)) Document.FLAG_SUPPORTS_THUMBNAIL else 0
+        val thumb = if (volume?.thumbnails != false && Thumbnails.supports(mime)) Document.FLAG_SUPPORTS_THUMBNAIL else 0
         val flags = thumb or if (!writable) 0 else
             Document.FLAG_SUPPORTS_DELETE or Document.FLAG_SUPPORTS_RENAME or Document.FLAG_SUPPORTS_MOVE or
                 if (entry.isDirectory) Document.FLAG_DIR_SUPPORTS_CREATE else Document.FLAG_SUPPORTS_WRITE

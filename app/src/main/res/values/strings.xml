@@ -73,4 +73,6 @@
     <string name="error_refused">Nothing answers on that port · check the port and that NFS is running</string>
     <string name="pick_several_exports">Tick several to add each as its own folder</string>
     <string name="error_insecure">Server refused this device · add \"insecure\" to the export and allow this device\'s address</string>
+    <string name="field_thumbnails">Thumbnails</string>
+    <string name="thumbnails_body">Previews of photos and videos in Files. Turn off on slow connections.</string>
 </resources>

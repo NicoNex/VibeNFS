@@ -26,6 +26,8 @@ data class Volume(
     val uid: Int = -1,
     val gid: Int = -1,
     val readOnly: Boolean = false,
+    /** Off for slow links or shares without media: Files then shows plain icons and reads nothing extra. */
+    val thumbnails: Boolean = true,
     val mounted: Boolean = false,
 )
 

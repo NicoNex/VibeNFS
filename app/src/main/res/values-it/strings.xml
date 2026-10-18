@@ -67,4 +67,6 @@
     <string name="error_refused">Nessuna risposta su quella porta · controlla la porta e che NFS sia attivo</string>
     <string name="pick_several_exports">Selezionane più di uno per aggiungerli come cartelle separate</string>
     <string name="error_insecure">Il server rifiuta questo dispositivo · aggiungi \"insecure\" all\'export e consenti l\'indirizzo di questo dispositivo</string>
+    <string name="field_thumbnails">Miniature</string>
+    <string name="thumbnails_body">Anteprime di foto e video in File. Disattivale sulle connessioni lente.</string>
 </resources>

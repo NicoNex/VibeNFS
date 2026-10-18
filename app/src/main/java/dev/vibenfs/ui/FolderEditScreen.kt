@@ -108,6 +108,7 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
     var uid by rememberSaveable { mutableStateOf(existing?.uid?.takeIf { it >= 0 }?.toString().orEmpty()) }
     var gid by rememberSaveable { mutableStateOf(existing?.gid?.takeIf { it >= 0 }?.toString().orEmpty()) }
     var readOnly by rememberSaveable { mutableStateOf(existing?.readOnly ?: false) }
+    var thumbnails by rememberSaveable { mutableStateOf(existing?.thumbnails ?: true) }
     var advanced by rememberSaveable { mutableStateOf(port.isNotEmpty() || uid.isNotEmpty() || gid.isNotEmpty()) }
     var revealAdvanced by remember { mutableStateOf(false) }
     val advancedView = remember { BringIntoViewRequester() }
@@ -140,6 +141,7 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
             uid = uid.toIntOrNull() ?: -1,
             gid = gid.toIntOrNull() ?: -1,
             readOnly = readOnly,
+            thumbnails = thumbnails,
             mounted = mounted,
         )
     }
@@ -267,13 +269,8 @@ fun FolderEditScreen(id: String?, onBack: () -> Unit) {
             }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.field_read_only), style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.read_only_body), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-            }
-            Switch(checked = readOnly, onCheckedChange = { readOnly = it })
-        }
+        SwitchRow(stringResource(R.string.field_read_only), stringResource(R.string.read_only_body), readOnly) { readOnly = it }
+        SwitchRow(stringResource(R.string.field_thumbnails), stringResource(R.string.thumbnails_body), thumbnails) { thumbnails = it }
 
         TextButton(onClick = { advanced = !advanced; revealAdvanced = advanced }) {
             Text(stringResource(R.string.advanced))
@@ -374,6 +371,17 @@ private fun TestCard(result: TestResult) {
                 if (result is TestResult.Failed) ErrorText(result.message, content, size = 11)
             }
         }
+    }
+}
+
+@Composable
+private fun SwitchRow(title: String, body: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

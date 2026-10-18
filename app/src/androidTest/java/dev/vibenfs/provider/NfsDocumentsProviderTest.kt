@@ -69,8 +69,9 @@ class NfsDocumentsProviderTest {
         val doc = DocumentsContract.createDocument(
             resolver, DocumentsContract.buildDocumentUri(AUTHORITY, rootDoc), "application/octet-stream", "blocks-${System.nanoTime()}.bin",
         )!!
-        // Several 512 KiB blocks plus a ragged tail, so block edges and the end of file are both crossed.
-        val bytes = Random(7).nextBytes(5 * 512 * 1024 + 12_345)
+        // Enough blocks for the read-ahead window to grow, plus a ragged tail, so block edges and
+        // the end of file are both crossed.
+        val bytes = Random(7).nextBytes(24 * BlockReader.BLOCK + 12_345)
         resolver.openOutputStream(doc, "wt")!!.use { it.write(bytes) }
         try {
             assertArrayEquals(bytes, resolver.openInputStream(doc)!!.use { it.readBytes() })
