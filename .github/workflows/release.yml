@@ -89,7 +89,8 @@ jobs:
       - name: Read the signature back off the APK
         run: |
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
-          FINGERPRINT=$("$APKSIGNER" verify --print-certs vibenfs.apk | grep -i 'SHA-256 digest' | head -1 | cut -d: -f2- | tr -d ' ')
+          # Pull the 64-hex digest itself: apksigner's line format differs between build-tools versions.
+          FINGERPRINT=$("$APKSIGNER" verify --print-certs vibenfs.apk | grep -i 'SHA-256 digest' | head -1 | grep -oiE '[0-9a-f]{64}')
           echo "SIGNER_SHA256=$FINGERPRINT" >> "$GITHUB_ENV"
           echo "Signed by SHA-256 $FINGERPRINT"
 
