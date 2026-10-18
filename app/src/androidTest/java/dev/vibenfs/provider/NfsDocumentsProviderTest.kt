@@ -1,5 +1,8 @@
 package dev.vibenfs.provider
 
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Point
 import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.provider.DocumentsContract.Root
@@ -9,8 +12,12 @@ import dev.vibenfs.data.Volume
 import dev.vibenfs.mount.MountManager.Companion.AUTHORITY
 import dev.vibenfs.mounts
 import dev.vibenfs.nfs.NfsVersion
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import kotlin.random.Random
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -54,6 +61,49 @@ class NfsDocumentsProviderTest {
         assertTrue(DocumentsContract.deleteDocument(resolver, twin))
 
         assertTrue(DocumentsContract.deleteDocument(resolver, created))
+    }
+
+    @Test
+    fun readAheadServesSequentialAndRandomReads() {
+        val rootDoc = "${volume.id}:/"
+        val doc = DocumentsContract.createDocument(
+            resolver, DocumentsContract.buildDocumentUri(AUTHORITY, rootDoc), "application/octet-stream", "blocks-${System.nanoTime()}.bin",
+        )!!
+        // Several 512 KiB blocks plus a ragged tail, so block edges and the end of file are both crossed.
+        val bytes = Random(7).nextBytes(5 * 512 * 1024 + 12_345)
+        resolver.openOutputStream(doc, "wt")!!.use { it.write(bytes) }
+        try {
+            assertArrayEquals(bytes, resolver.openInputStream(doc)!!.use { it.readBytes() })
+            resolver.openFileDescriptor(doc, "r")!!.use { pfd ->
+                FileInputStream(pfd.fileDescriptor).channel.use { ch ->
+                    for (offset in listOf(bytes.size - 100L, 0L, 524_288L - 7, 1_700_000L, 3L)) {
+                        val buf = ByteBuffer.allocate(4096)
+                        ch.read(buf, offset)
+                        val n = buf.position()
+                        assertEquals(minOf(4096L, bytes.size - offset).toInt(), n)
+                        assertArrayEquals(bytes.copyOfRange(offset.toInt(), offset.toInt() + n), buf.array().copyOf(n))
+                    }
+                }
+            }
+        } finally {
+            DocumentsContract.deleteDocument(resolver, doc)
+        }
+    }
+
+    @Test
+    fun thumbnailDecodesOverNfs() {
+        val rootDoc = "${volume.id}:/"
+        val doc = DocumentsContract.createDocument(
+            resolver, DocumentsContract.buildDocumentUri(AUTHORITY, rootDoc), "image/jpeg", "thumb-${System.nanoTime()}.jpg",
+        )!!
+        try {
+            val photo = Bitmap.createBitmap(1600, 1200, Bitmap.Config.ARGB_8888).apply { eraseColor(Color.MAGENTA) }
+            resolver.openOutputStream(doc, "wt")!!.use { photo.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+            val thumb = DocumentsContract.getDocumentThumbnail(resolver, doc, Point(200, 200), null)!!
+            assertTrue(thumb.width in 200..400 && thumb.height >= 150)
+        } finally {
+            DocumentsContract.deleteDocument(resolver, doc)
+        }
     }
 
     private fun column(uri: android.net.Uri, name: String) = resolver.query(uri, null, null, null, null)!!.use { c ->

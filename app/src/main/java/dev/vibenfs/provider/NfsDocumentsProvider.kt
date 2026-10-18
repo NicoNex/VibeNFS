@@ -89,7 +89,7 @@ class NfsDocumentsProvider : DocumentsProvider() {
         val thread = HandlerThread("nfs-io").apply { start() }
         try {
             context!!.getSystemService(StorageManager::class.java).openProxyFileDescriptor(
-                pfdMode, ProxyCallback(nfs, fh, size, thread), Handler(thread.looper),
+                pfdMode, ProxyCallback(BlockReader(nfs, fh, size), thread), Handler(thread.looper),
             )
         } catch (e: Exception) {
             runCatching { nfs.close(fh) }
@@ -156,8 +156,11 @@ class NfsDocumentsProvider : DocumentsProvider() {
         val entry = client(doc).stat(doc.path)
         // Keyed by content identity, so an edited file gets a fresh thumbnail.
         val key = "$documentId|${entry.size}|${entry.lastModified}|${sizeHint.x}"
+        // Read straight over NFS, never through our own proxy fd: a thread of this process blocked on
+        // a FUSE file this process serves can't be killed and leaves a zombie until reboot.
+        val nfs = client(doc)
         val file = Thumbnails.cached(File(context!!.cacheDir, "thumbs"), key, mimeOf(entry.name), sizeHint, signal) {
-            openDocument(documentId, "r", signal)
+            BlockReader(nfs, nfs.open(doc.path, OsConstants.O_RDONLY), entry.size)
         } ?: throw FileNotFoundException("No thumbnail for ${doc.name}")
         AssetFileDescriptor(ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY), 0, file.length())
     }
@@ -213,20 +216,13 @@ class NfsDocumentsProvider : DocumentsProvider() {
      * Callbacks run on the per-file [thread]; errors surface to the reader as EIO. A volume unmounted
      * mid-read closes [nfs], which then fails calls cleanly instead of touching freed native state.
      */
-    private class ProxyCallback(
-        private val nfs: NfsClient,
-        private val fh: Long,
-        private var size: Long, // ponytail: open-time size, grown by our writes; external writers not tracked
-        private val thread: HandlerThread,
-    ) : ProxyFileDescriptorCallback() {
-        override fun onGetSize() = size
-        override fun onRead(offset: Long, size: Int, data: ByteArray) = errno { nfs.read(fh, data, size, offset) }
-        override fun onWrite(offset: Long, size: Int, data: ByteArray) = errno {
-            nfs.write(fh, data, size, offset).also { this.size = maxOf(this.size, offset + it) }
-        }
+    private class ProxyCallback(private val reader: BlockReader, private val thread: HandlerThread) : ProxyFileDescriptorCallback() {
+        override fun onGetSize() = reader.size
+        override fun onRead(offset: Long, size: Int, data: ByteArray) = errno { reader.read(offset, data, 0, size) }
+        override fun onWrite(offset: Long, size: Int, data: ByteArray) = errno { reader.write(offset, data, size) }
         override fun onFsync() = Unit
         override fun onRelease() {
-            runCatching { nfs.close(fh) }
+            runCatching { reader.close() }
             thread.quitSafely()
         }
 
@@ -238,6 +234,7 @@ class NfsDocumentsProvider : DocumentsProvider() {
     }
 
     companion object {
+
         private val ROOT_COLUMNS = arrayOf(
             Root.COLUMN_ROOT_ID, Root.COLUMN_DOCUMENT_ID, Root.COLUMN_TITLE, Root.COLUMN_SUMMARY,
             Root.COLUMN_ICON, Root.COLUMN_FLAGS, Root.COLUMN_AVAILABLE_BYTES,
