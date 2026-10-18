@@ -14,13 +14,23 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // ponytail: real devices + emulator only; add armeabi-v7a if 32-bit phones matter
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+    }
+    ndkVersion = "29.0.14206865"
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "4.1.2"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     buildFeatures { compose = true }
@@ -47,4 +57,6 @@ dependencies {
     implementation(libs.compose.material.icons)
     debugImplementation(libs.compose.ui.tooling)
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }

@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 17+: required to reach private-range NAS addresses (runtime, Nearby devices group). -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:allowBackup="true"
