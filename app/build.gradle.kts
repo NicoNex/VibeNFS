@@ -75,6 +75,10 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.glance.appwidget)
+    // Glance pulls WorkManager 2.7, which brings Room 2.2: its reflection-built WorkDatabase did not
+    // survive R8 full mode, so minified release builds crashed at startup. Pinning a current
+    // WorkManager (Room 2.7) fixes it; verified on a release build.
+    implementation(libs.androidx.work.runtime)
     implementation(libs.kotlinx.serialization.json)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
