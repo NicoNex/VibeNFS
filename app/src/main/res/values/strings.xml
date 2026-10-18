@@ -1,3 +1,54 @@
 <resources>
-    <string name="app_name">VibeNFS</string>
+    <string name="app_name" translatable="false">VibeNFS</string>
+
+    <!-- Folder list -->
+    <string name="folders_title">Network folders</string>
+    <string name="add_folder">Add network folder</string>
+    <string name="empty_title">Nothing on the network yet</string>
+    <string name="empty_body">Add an NFS share and it shows up in the Files app, like any other drive.</string>
+    <string name="state_mounted">Mounted</string>
+    <string name="state_off">Off</string>
+    <string name="state_connecting">Connecting</string>
+    <string name="state_error">Error</string>
+    <string name="free_of_total">%1$s free of %2$s</string>
+    <string name="mount_all">Mount all</string>
+    <string name="unmount_all">Unmount all</string>
+    <string name="retry">Retry</string>
+    <string name="open_in_files">Open in Files</string>
+
+    <!-- Editor -->
+    <string name="edit_folder">Edit network folder</string>
+    <string name="field_name">Name</string>
+    <string name="field_host">Server address</string>
+    <string name="field_host_hint">192.168.1.10 or server.local</string>
+    <string name="field_export">Shared path</string>
+    <string name="field_port">Port</string>
+    <string name="field_port_hint">Leave empty for default</string>
+    <string name="field_uid">UID</string>
+    <string name="field_gid">GID</string>
+    <string name="field_read_only">Read only</string>
+    <string name="field_version">Protocol</string>
+    <string name="version_auto">Auto</string>
+    <string name="discovered_exports">Found on server</string>
+    <string name="advanced">Advanced</string>
+    <string name="test_connection">Test connection</string>
+    <string name="test_ok">Connected · %1$s free</string>
+    <string name="save">Save</string>
+    <string name="save_and_mount">Save and mount</string>
+    <string name="delete">Delete</string>
+    <string name="delete_confirm">Delete “%1$s”? Files on the server are not touched.</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_required">Required</string>
+    <string name="local_network_rationale">VibeNFS needs access to devices on your local network to reach your NFS server.</string>
+    <string name="grant">Allow</string>
+
+    <!-- Quick Settings / widget -->
+    <string name="tile_label">NFS</string>
+    <string name="tile_subtitle_none">Not mounted</string>
+    <plurals name="tile_subtitle_mounted">
+        <item quantity="one">%d mounted</item>
+        <item quantity="other">%d mounted</item>
+    </plurals>
+    <string name="widget_description">Mount and unmount your network folders</string>
+    <string name="connection_error">Connection failed</string>
 </resources>

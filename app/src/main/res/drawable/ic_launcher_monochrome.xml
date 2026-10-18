@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Folder with carved signal arcs; arcs and dot are even-odd holes so the glyph works as an alpha mask. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#FFFFFF" android:pathData="M34,38h12l4,4h24a4,4 0,0 1,4 4v26a4,4 0,0 1,-4 4h-40a4,4 0,0 1,-4 -4v-30a4,4 0,0 1,4 -4z" />
-    <path
-        android:pathData="M37,55q4.5,-4 9,0t9,0t9,0t9,0M37,64q4.5,-4 9,0t9,0t9,0t9,0"
-        android:strokeColor="#000000"
-        android:strokeWidth="3.5"
-        android:strokeLineCap="round" />
+    <group android:scaleX="2.75" android:scaleY="2.75" android:translateX="21" android:translateY="21">
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M2.5,7a2.5,2.5 0,0 1,2.5 -2.5h4.2l2,2H19A2.5,2.5 0,0 1,21.5 9v8A2.5,2.5 0,0 1,19 19.5H5A2.5,2.5 0,0 1,2.5 17zM7.491,12.745A6.2,6.2 0 0,1 16.509,12.745A0.7,0.7 0 0,1 15.491,13.706A4.8,4.8 0 0,0 8.509,13.706A0.7,0.7 0 0,1 7.491,12.745ZM9.287,14.484A3.7,3.7 0 0,1 14.713,14.484A0.7,0.7 0 0,1 13.687,15.436A2.3,2.3 0 0,0 10.313,15.436A0.7,0.7 0 0,1 9.287,14.484ZM11.1,17a0.9,0.9 0,1 0,1.8 0a0.9,0.9 0,1 0,-1.8 0z" />
+    </group>
 </vector>

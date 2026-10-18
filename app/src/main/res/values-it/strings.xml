@@ -1,0 +1,49 @@
+<resources>
+    <string name="folders_title">Cartelle di rete</string>
+    <string name="add_folder">Aggiungi cartella di rete</string>
+    <string name="empty_title">Ancora niente in rete</string>
+    <string name="empty_body">Aggiungi una condivisione NFS e la trovi nell\'app File, come qualsiasi altra unità.</string>
+    <string name="state_mounted">Montata</string>
+    <string name="state_off">Spenta</string>
+    <string name="state_connecting">Connessione</string>
+    <string name="state_error">Errore</string>
+    <string name="free_of_total">%1$s liberi su %2$s</string>
+    <string name="mount_all">Monta tutte</string>
+    <string name="unmount_all">Smonta tutte</string>
+    <string name="retry">Riprova</string>
+    <string name="open_in_files">Apri in File</string>
+
+    <string name="edit_folder">Modifica cartella di rete</string>
+    <string name="field_name">Nome</string>
+    <string name="field_host">Indirizzo server</string>
+    <string name="field_host_hint">192.168.1.10 o server.local</string>
+    <string name="field_export">Percorso condiviso</string>
+    <string name="field_port">Porta</string>
+    <string name="field_port_hint">Vuoto per la predefinita</string>
+    <string name="field_uid">UID</string>
+    <string name="field_gid">GID</string>
+    <string name="field_read_only">Sola lettura</string>
+    <string name="field_version">Protocollo</string>
+    <string name="version_auto">Auto</string>
+    <string name="discovered_exports">Trovati sul server</string>
+    <string name="advanced">Avanzate</string>
+    <string name="test_connection">Prova connessione</string>
+    <string name="test_ok">Connessa · %1$s liberi</string>
+    <string name="save">Salva</string>
+    <string name="save_and_mount">Salva e monta</string>
+    <string name="delete">Elimina</string>
+    <string name="delete_confirm">Eliminare “%1$s”? I file sul server non vengono toccati.</string>
+    <string name="cancel">Annulla</string>
+    <string name="error_required">Obbligatorio</string>
+    <string name="local_network_rationale">VibeNFS ha bisogno di accedere ai dispositivi della rete locale per raggiungere il server NFS.</string>
+    <string name="grant">Consenti</string>
+
+    <string name="tile_label">NFS</string>
+    <string name="tile_subtitle_none">Nessuna montata</string>
+    <plurals name="tile_subtitle_mounted">
+        <item quantity="one">%d montata</item>
+        <item quantity="other">%d montate</item>
+    </plurals>
+    <string name="widget_description">Monta e smonta le tue cartelle di rete</string>
+    <string name="connection_error">Connessione non riuscita</string>
+</resources>

@@ -34,7 +34,10 @@ static void throwIo(JNIEnv *env, struct nfs_context *nfs, int err, const char *w
     const char *msg = nfs ? nfs_get_error(nfs) : NULL;
     char buf[512];
     snprintf(buf, sizeof buf, "%s: %s", what, msg && *msg ? msg : strerror(-err));
-    jclass cls = (*env)->FindClass(env, err == -ENOENT ? "java/io/FileNotFoundException" : "java/io/IOException");
+    const char *type = err == -ENOENT ? "java/io/FileNotFoundException"
+                     : err == -EEXIST ? "java/nio/file/FileAlreadyExistsException"
+                     : "java/io/IOException";
+    jclass cls = (*env)->FindClass(env, type);
     (*env)->ThrowNew(env, cls, buf);
 }
 
